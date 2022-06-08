@@ -1,0 +1,9 @@
+-c prod.txt
+-c test.txt
+
+pip-tools
+pre-commit
+
+black
+flake8
+mypy

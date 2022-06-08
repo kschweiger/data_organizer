@@ -1,0 +1,6 @@
+-c prod.txt
+-c dev.txt
+
+pytest
+pytest-cov
+pytest-mock
