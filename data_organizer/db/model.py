@@ -3,7 +3,7 @@ from typing import List
 from pydantic import BaseModel
 
 
-class ColumnInfo(BaseModel):
+class ColumnSetting(BaseModel):
     """Object holding information on columns"""
 
     name: str
@@ -13,8 +13,8 @@ class ColumnInfo(BaseModel):
     is_unique: bool = False
 
 
-class TableInfo(BaseModel):
+class TableSetting(BaseModel):
     """Object holding the information for a table"""
 
     name: str
-    columns: List[ColumnInfo]
+    columns: List[ColumnSetting]

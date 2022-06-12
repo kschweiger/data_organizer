@@ -8,7 +8,7 @@ from sqlalchemy.engine import Engine
 
 from data_organizer.db.connection import Backend, DatabaseConnection
 from data_organizer.db.exceptions import QueryReturnedNoData, TableNotExists
-from data_organizer.db.model import ColumnInfo, TableInfo
+from data_organizer.db.model import ColumnSetting, TableSetting
 from data_organizer.utils import init_logging
 
 init_logging("DEBUG")
@@ -150,9 +150,9 @@ def test_create_from_table_info(db):
         "D": {"ctype": "INT"},
     }
     creation_settings = [
-        TableInfo(
+        TableSetting(
             name="table_from_info_" + str(uuid.uuid4()).replace("-", "_"),
-            columns=[ColumnInfo(name=name, **info) for name, info in cols.items()],
+            columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
         )
     ]
 

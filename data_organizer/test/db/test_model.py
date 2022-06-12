@@ -1,6 +1,6 @@
 import pytest
 
-from data_organizer.db.model import ColumnInfo
+from data_organizer.db.model import ColumnSetting
 
 
 @pytest.mark.parametrize(
@@ -51,7 +51,7 @@ from data_organizer.db.model import ColumnInfo
 def test_column_info(
     init_dict, exp_name, exp_ctype, exp_is_primary, exp_is_nullable, exp_is_unique
 ):
-    c = ColumnInfo(**init_dict)
+    c = ColumnSetting(**init_dict)
 
     assert c.name == exp_name
     assert c.ctype == exp_ctype

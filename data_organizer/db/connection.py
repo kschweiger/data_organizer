@@ -10,7 +10,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.exc import OperationalError
 
 from data_organizer.db.exceptions import QueryReturnedNoData, TableNotExists
-from data_organizer.db.model import TableInfo
+from data_organizer.db.model import ColumnSetting, TableSetting
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +137,9 @@ class DatabaseConnection:
         else:
             return False
 
-    def create_table_from_table_info(self, creation_settings: List[TableInfo]) -> None:
+    def create_table_from_table_info(
+        self, creation_settings: List[TableSetting]
+    ) -> None:
         """
         Creates a table based on the passed settings.
 
@@ -172,3 +174,13 @@ class DatabaseConnection:
                 create_statement = create_statement.primary_key(*primary_columns)
 
             self.engine.execute(create_statement.get_sql())
+
+    def add_column_to_table(self, table_name: str, new_column: ColumnSetting) -> None:
+        """
+        Add a new column to an existing table
+
+        Args:
+            table_name: Name of the table
+            new_column: Settings for the now column
+        """
+        raise NotImplementedError
