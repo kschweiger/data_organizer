@@ -1,0 +1,7 @@
+[db]
+user="dev"
+database="Development"
+host="localhost"
+port=5432
+prefix="postgresql+psycopg2"
+schema="data_organization"
