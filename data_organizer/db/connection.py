@@ -3,11 +3,14 @@ from enum import Enum, auto
 from typing import List
 
 import pandas as pd
+from pypika import Dialects
+from pypika.queries import Column, CreateQueryBuilder
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import OperationalError
 
 from data_organizer.db.exceptions import QueryReturnedNoData, TableNotExists
+from data_organizer.db.model import TableInfo
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +43,10 @@ class DatabaseConnection:
 
         if "mysql" in prefix:
             self.backend = Backend.MYSQL
+            self.dialect = Dialects.MYSQL
         elif "postgresql" in prefix:
             self.backend = Backend.POSTGRES
+            self.dialect = Dialects.POSTGRESQL
         else:
             raise NotImplementedError(
                 "Currently only %s are supported as backends"
@@ -131,3 +136,39 @@ class DatabaseConnection:
             return True
         else:
             return False
+
+    def create_table_from_table_info(self, creation_settings: List[TableInfo]) -> None:
+        """
+        Creates a table based on the passed settings.
+
+        Args:
+            creation_settings: Nested dictionary containing the information to create
+                               one or more tables
+        """
+        for table_info in creation_settings:
+            create_columns = []
+            unique_columns = []
+            primary_columns = []
+            for column_info in table_info.columns:
+                create_columns.append(
+                    Column(
+                        column_name=column_info.name,
+                        column_type=column_info.ctype,
+                        nullable=column_info.is_nullable,
+                    )
+                )
+                if column_info.is_unique:
+                    unique_columns.append(column_info.name)
+                if column_info.is_primary:
+                    primary_columns.append(column_info.name)
+            create_statement = (
+                CreateQueryBuilder(dialect=self.dialect)
+                .create_table(table_info.name)
+                .columns(*create_columns)
+            )
+            if unique_columns:
+                create_statement = create_statement.unique(*unique_columns)
+            if primary_columns:
+                create_statement = create_statement.primary_key(*primary_columns)
+
+            self.engine.execute(create_statement.get_sql())

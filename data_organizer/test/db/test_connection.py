@@ -8,6 +8,7 @@ from sqlalchemy.engine import Engine
 
 from data_organizer.db.connection import Backend, DatabaseConnection
 from data_organizer.db.exceptions import QueryReturnedNoData, TableNotExists
+from data_organizer.db.model import ColumnInfo, TableInfo
 from data_organizer.utils import init_logging
 
 init_logging("DEBUG")
@@ -139,6 +140,27 @@ def test_insert_append(db, test_table_create_drop):
 
     with pytest.raises(TableNotExists):
         db.insert(table_name="bogus_table", data=data_to_insert, if_exists="append")
+
+
+def test_create_from_table_info(db):
+    cols = {
+        "A": {"ctype": "INT", "is_primary": True, "is_unique": True},
+        "B": {"ctype": "INT", "is_primary": True},
+        "C": {"ctype": "INT", "is_nullable": True},
+        "D": {"ctype": "INT"},
+    }
+    creation_settings = [
+        TableInfo(
+            name="table_from_info_" + str(uuid.uuid4()).replace("-", "_"),
+            columns=[ColumnInfo(name=name, **info) for name, info in cols.items()],
+        )
+    ]
+
+    db.create_table_from_table_info(creation_settings)
+
+    for table in creation_settings:
+        assert db.has_table(table.name)
+        db.engine.execute(f"DROP TABLE {table.name}")
 
 
 def test_DatabaseConnection_schema():
