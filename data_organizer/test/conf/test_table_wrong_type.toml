@@ -1,0 +1,13 @@
+dynaconf_merge=true
+tables=["table_1"]
+
+[table_1]
+    name="possibly_longer_name_for_table_1"
+    bogus_key_no_dict=[1,2]
+    [table_1.A]
+        ctype="INT"
+        is_primary=true
+        is_unique=true
+        nullable=true
+    [table_1.B]
+        ctype="INT"

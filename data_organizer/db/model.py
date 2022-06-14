@@ -1,6 +1,8 @@
-from typing import List
+from typing import Dict, List, Union
 
 from pydantic import BaseModel
+
+ColumnConfigType = Dict[str, Union[str, bool]]
 
 
 class ColumnSetting(BaseModel):
@@ -18,3 +20,18 @@ class TableSetting(BaseModel):
 
     name: str
     columns: List[ColumnSetting]
+
+
+def get_table_setting_from_dict(
+    data: Dict[str, Union[str, ColumnConfigType]]
+) -> TableSetting:
+    column_data: Dict[str, ColumnConfigType] = {
+        key: item for key, item in data.items() if key != "name"  # type: ignore
+    }
+
+    return TableSetting(
+        name=data["name"],
+        columns=[
+            ColumnSetting(name=key, **items) for key, items in column_data.items()
+        ],
+    )

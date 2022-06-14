@@ -1,6 +1,10 @@
 import pytest
 
-from data_organizer.db.model import ColumnSetting
+from data_organizer.db.model import (
+    ColumnSetting,
+    TableSetting,
+    get_table_setting_from_dict,
+)
 
 
 @pytest.mark.parametrize(
@@ -58,3 +62,17 @@ def test_column_info(
     assert c.is_primary == exp_is_primary
     assert c.is_nullable == exp_is_nullable
     assert c.is_unique == exp_is_unique
+
+
+def test_get_table_setting_from_dict():
+    test_dict = {
+        "name": "table_name",
+        "A": {"ctype": "INT", "is_primary": True, "is_unique": True},
+        "B": {"ctype": "INT", "is_primary": True},
+        "C": {"ctype": "FLOAT"},
+        "D": {"ctype": "FLOAT", "nullable": False},
+    }
+
+    table_setting = get_table_setting_from_dict(test_dict)
+
+    assert isinstance(table_setting, TableSetting)

@@ -1,6 +1,6 @@
-from typing import List
+from typing import Dict, List
 
-from dynaconf import Dynaconf, LazySettings, Validator
+from dynaconf import Dynaconf, LazySettings, ValidationError, Validator
 
 
 def get_config(
@@ -34,6 +34,13 @@ def get_config(
         settings_files=files,
         envvar_prefix=name.upper(),
     )
+
+    validate_settings(settings)
+
+    return settings
+
+
+def validate_settings(settings: LazySettings) -> None:
     settings.validators.register(
         # Validate DB settings
         Validator("db.user", must_exist=True),
@@ -43,7 +50,74 @@ def get_config(
         Validator("db.port", must_exist=True),
         Validator("db.prefix", must_exist=True),
         Validator("db.schema", default=None),
+        Validator("tables", default=None),
     )
     settings.validators.validate()
 
-    return settings
+    # Validate table settings
+    if settings.tables:
+        validate_table(settings)
+
+
+def validate_table(settings: LazySettings) -> None:
+    """
+
+    Args:
+        setting: Initialized settings from dynaconf
+
+    Raises:
+        ValidationError if some criteria is not met
+    """
+    mandatory_columns = settings.table_settings.mandatory_columns
+    optional_columns = settings.table_settings.optional_columns
+
+    type_map = {"str": str, "bool": bool, "int": int, "float": float}
+
+    key_types: Dict[str, type] = {
+        key: type_map[cfg_type]
+        for key, cfg_type in settings.table_settings.key_types.items()
+    }
+
+    for table in settings.tables:
+        table_settings = settings[table]
+        # Check if table as a name
+        if "name" not in table_settings.keys():
+            raise ValidationError("name not defined in table %s" % table)
+        for key in [key for key in table_settings.keys() if key != "name"]:
+            # Check that the item for all other keys is a dict
+            if not isinstance(table_settings[key], dict):
+                raise ValidationError(
+                    "Key %s in table %s is not a dict." % (key, table)
+                )
+            for column_key in table_settings[key].keys():
+                # Check that all kes (expect name) are in the mandatory or optional
+                # keys defined above
+                if column_key not in mandatory_columns + optional_columns:
+                    raise ValidationError(
+                        "Column %s in table %s has invalid key %s"
+                        % (key, table, column_key)
+                    )
+                # Check the type of the keys
+                if not isinstance(
+                    table_settings[key][column_key], key_types[column_key]
+                ):
+                    raise ValidationError(
+                        "%s / column %s / table %s - Wrong type. Expected %s"
+                        % (
+                            column_key,
+                            key,
+                            table,
+                            key_types[column_key],
+                        )
+                    )
+            # Check that all mandatory keys are set in each column
+            if not all(
+                [
+                    mandatory_key in table_settings[key].keys()
+                    for mandatory_key in mandatory_columns
+                ]
+            ):
+                raise ValidationError(
+                    "Column %s in table %s is missing mandatory keys. %s are needed"
+                    % (key, table, mandatory_columns)
+                )
