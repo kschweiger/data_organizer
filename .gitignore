@@ -132,7 +132,6 @@ dmypy.json
 # File system stuff
 .DS_Store
 *.*~
-data/
 .#*
 
 # Dynaconf
