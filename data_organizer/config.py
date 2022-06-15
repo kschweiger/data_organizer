@@ -1,8 +1,11 @@
+import logging
 from typing import Dict, List
 
 from dynaconf import Dynaconf, LazySettings, ValidationError, Validator
 
-from data_organizer.db.model import get_table_setting_from_dict
+from data_organizer.db.model import TableSetting, get_table_setting_from_dict
+
+logger = logging.getLogger(__name__)
 
 
 class OrganizerConfig:
@@ -22,7 +25,7 @@ class OrganizerConfig:
             additional_configs=additional_configs,
         )
 
-        self.tables = {}
+        self.tables: Dict[str, TableSetting] = {}
         if self.settings.tables:
             for table in self.settings.tables:
                 self.tables[table] = get_table_setting_from_dict(
@@ -49,6 +52,12 @@ def get_settings(
 
     Returns: A DynaConf Settings object
     """
+    logger.debug("Initializing config with:")
+    logger.debug("Name: %s", name)
+    logger.debug("Base dir: %s", config_dir_base)
+    logger.debug("Default settings: %s", default_settings)
+    logger.debug("Secrets: %s", secrets)
+    logger.debug("Additional files: %s", additional_configs)
     files = [
         f"{config_dir_base}/{default_settings}",
         f"{config_dir_base}/{secrets}",

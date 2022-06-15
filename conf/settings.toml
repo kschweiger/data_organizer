@@ -8,9 +8,9 @@ schema="data_organization"
 
 [table_settings]
 mandatory_columns = ["ctype"]
-optional_columns = ["is_primary", "is_unique", "nullable"]
+optional_columns = ["is_primary", "is_unique", "is_nullable"]
 [table_settings.key_types]
     ctype="str"
     is_primary="bool"
     is_unique="bool"
-    nullable="bool"
+    is_nullable="bool"
