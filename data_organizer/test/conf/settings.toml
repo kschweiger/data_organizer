@@ -4,7 +4,7 @@ database="Development"
 host="localhost"
 port=5432
 prefix="postgresql+psycopg2"
-schema="data_organization"
+schema="data_organization_testing"
 
 [table_settings]
 mandatory_columns = ["ctype"]

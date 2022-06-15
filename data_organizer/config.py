@@ -2,8 +2,35 @@ from typing import Dict, List
 
 from dynaconf import Dynaconf, LazySettings, ValidationError, Validator
 
+from data_organizer.db.model import get_table_setting_from_dict
 
-def get_config(
+
+class OrganizerConfig:
+    def __init__(
+        self,
+        name: str = "DataOrganizer",
+        config_dir_base: str = "conf/",
+        default_settings: str = "settings.toml",
+        secrets: str = ".secrets.toml",
+        additional_configs: List[str] = [],
+    ):
+        self.settings = get_settings(
+            name=name,
+            config_dir_base=config_dir_base,
+            default_settings=default_settings,
+            secrets=secrets,
+            additional_configs=additional_configs,
+        )
+
+        self.tables = {}
+        if self.settings.tables:
+            for table in self.settings.tables:
+                self.tables[table] = get_table_setting_from_dict(
+                    self.settings[table].to_dict()
+                )
+
+
+def get_settings(
     name: str = "DataOrganizer",
     config_dir_base: str = "conf/",
     default_settings: str = "settings.toml",

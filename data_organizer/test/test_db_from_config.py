@@ -2,10 +2,9 @@ import os
 from unittest import mock
 
 import pytest
-from dynaconf import LazySettings
 from sqlalchemy.engine import Engine
 
-from data_organizer.config import get_config
+from data_organizer.config import OrganizerConfig
 from data_organizer.db.connection import Backend, DatabaseConnection
 from data_organizer.db.model import get_table_setting_from_dict
 from data_organizer.utils import init_logging
@@ -17,7 +16,7 @@ if os.getenv("PG_DEV_DB_USER") is None or os.getenv("PG_DEV_DB_PASSWORD") is Non
 
 
 @pytest.fixture(scope="session")
-def config() -> LazySettings:
+def config() -> OrganizerConfig:
     with mock.patch.dict(
         os.environ,
         {
@@ -25,10 +24,10 @@ def config() -> LazySettings:
             "TESTCONFIG_DB__password": os.getenv("PG_DEV_DB_PASSWORD"),
         },
     ):
-        config = get_config(
+        config = OrganizerConfig(
             "TESTCONFIG",
-            secrets="",
             config_dir_base="data_organizer/test/conf",
+            secrets="",
             additional_configs=["test_table_good.toml"],
         )
         return config
@@ -36,13 +35,14 @@ def config() -> LazySettings:
 
 @pytest.fixture(scope="session")
 def database(config):
-    db = DatabaseConnection(**config.db.to_dict())
+    db = DatabaseConnection(**config.settings.db.to_dict())
     yield db
+    db.engine.execute(f"DROP SCHEMA {db.schema}")
     db.close()
 
 
 def test_init_db(config):
-    db = DatabaseConnection(**config.db.to_dict())
+    db = DatabaseConnection(**config.settings.db.to_dict())
 
     assert db.is_valid
     assert isinstance(db.engine, Engine)
@@ -54,9 +54,9 @@ def test_init_db(config):
 
 def test_create_table(config, database):
     database.create_table_from_table_info(
-        [get_table_setting_from_dict(config["table_1"].to_dict())]
+        [get_table_setting_from_dict(config.settings["table_1"].to_dict())]
     )
 
-    assert database.has_table(config["table_1"].name)
+    assert database.has_table(config.settings["table_1"].name)
 
-    database.engine.execute(f"DROP TABLE {config['table_1'].name}")
+    database.engine.execute(f"DROP TABLE {config.settings['table_1'].name}")
