@@ -1,13 +1,13 @@
 import logging
 from enum import Enum, auto
-from typing import List
+from typing import List, Optional, Tuple
 
 import pandas as pd
 from pypika import Dialects
 from pypika.queries import Column, CreateQueryBuilder
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine import Connection
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 from data_organizer.db.exceptions import QueryReturnedNoData, TableNotExists
 from data_organizer.db.model import ColumnSetting, TableSetting
@@ -53,12 +53,16 @@ class DatabaseConnection:
                 % (",".join(Backend.avail_backends()))
             )
 
+        connect_args = {}
+        if self.backend == Backend.POSTGRES:
+            connect_args.update({"application_name": "DataOrganizer"})
+            if schema is not None:
+                connect_args.update({"options": f"-csearch_path={schema},public"})
+
         self.engine = create_engine(
             url,
             echo=verbose,
-            connect_args={"options": f"-csearch_path={schema},public"}
-            if (self.backend == Backend.POSTGRES and schema is not None)
-            else {},
+            connect_args=connect_args,
         )
         connection: Connection
         try:
@@ -105,7 +109,7 @@ class DatabaseConnection:
 
     def insert(
         self, table_name: str, data: pd.DataFrame, if_exists: str = "append"
-    ) -> None:
+    ) -> Tuple[bool, Optional[str]]:
         """
         Function to insert a DataFrame into the sql database
 
@@ -120,7 +124,16 @@ class DatabaseConnection:
         logger.debug(
             "Inserting data into table %s - if_exists = %s", table_name, if_exists
         )
-        data.to_sql(table_name, con=self.engine, if_exists=if_exists, index=False)
+        err_str = None
+        try:
+            data.to_sql(table_name, con=self.engine, if_exists=if_exists, index=False)
+            data_inserted = True
+        except IntegrityError as e:
+            logger.error("Data could not be inserted: %s", str(e))
+            data_inserted = False
+            err_str = str(e)
+
+        return data_inserted, err_str
 
     def has_table(self, table_name: str) -> bool:
         """
