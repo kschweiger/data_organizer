@@ -37,6 +37,7 @@ class DatabaseConnection:
         prefix: str = "postgresql+psycopg2",
         verbose: bool = False,
         schema: str = None,
+        name: str = "DataOrganizer",
     ):
         url = f"{prefix}://{user}:{password}@{host}:{port}/{database}"
         logger.info("Engine URL: %s", url)
@@ -55,7 +56,7 @@ class DatabaseConnection:
 
         connect_args = {}
         if self.backend == Backend.POSTGRES:
-            connect_args.update({"application_name": "DataOrganizer"})
+            connect_args.update({"application_name": name})
             if schema is not None:
                 connect_args.update({"options": f"-csearch_path={schema},public"})
 
@@ -77,13 +78,14 @@ class DatabaseConnection:
             connection.close()
 
         self.schema = schema
-        if schema is not None:
-            avail_schemas = self.engine.execute(
-                "SELECT schema_name FROM information_schema.schemata"
-            )
-            if schema not in [x[0] for x in avail_schemas]:
-                logger.info("Will  create schema: %s", schema)
-                self.engine.execute(f"CREATE SCHEMA {schema}")
+        if schema is not None and self.is_valid:
+            with self.engine.connect() as connection:
+                avail_schemas = connection.execute(
+                    "SELECT schema_name FROM information_schema.schemata"
+                )
+                if schema not in [x[0] for x in avail_schemas]:
+                    logger.info("Will  create schema: %s", schema)
+                    connection.execute(f"CREATE SCHEMA {schema}")
 
         self.created_tables: List[str] = []
 
@@ -91,6 +93,12 @@ class DatabaseConnection:
         """Close the connection"""
         logger.info("Closing connection")
         self.engine.dispose()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def query(self, sql: str) -> pd.DataFrame:
         """
@@ -100,7 +108,8 @@ class DatabaseConnection:
           sql : Valid SQL query
         """
         logger.debug("Query: %s", sql.replace("\n", " "))
-        data: pd.DataFrame = pd.read_sql_query(sql, self.engine)
+        with self.engine.connect() as connection:
+            data: pd.DataFrame = pd.read_sql_query(sql, connection)
 
         if data.empty:
             raise QueryReturnedNoData
@@ -126,8 +135,11 @@ class DatabaseConnection:
         )
         err_str = None
         try:
-            data.to_sql(table_name, con=self.engine, if_exists=if_exists, index=False)
-            data_inserted = True
+            with self.engine.connect() as connection:
+                data.to_sql(
+                    table_name, con=connection, if_exists=if_exists, index=False
+                )
+                data_inserted = True
         except IntegrityError as e:
             logger.error("Data could not be inserted: %s", str(e))
             data_inserted = False
@@ -145,7 +157,9 @@ class DatabaseConnection:
         Returns:
             True if table exists, False otherwise
         """
-        if inspect(self.engine).has_table(table_name):
+        with self.engine.connect() as connection:
+            has_table = inspect(connection).has_table(table_name)
+        if has_table:
             return True
         else:
             return False
@@ -186,7 +200,8 @@ class DatabaseConnection:
             if primary_columns:
                 create_statement = create_statement.primary_key(*primary_columns)
 
-            self.engine.execute(create_statement.get_sql())
+            with self.engine.connect() as connection:
+                connection.execute(create_statement.get_sql())
 
     def add_column_to_table(self, table_name: str, new_column: ColumnSetting) -> None:
         """

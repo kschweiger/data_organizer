@@ -37,12 +37,10 @@ def cli(
     if not config.tables:
         click.echo("No tables set in the initialized configuration")
 
-    # TODO: Replace with **with** statement that automatically closes the connection
-    db = DatabaseConnection(**config.settings.db.to_dict())
+    conn_name = "DataOrganizerCli-EditTable"
 
-    edit(config, db)
-
-    db.close()
+    with DatabaseConnection(**config.settings.db.to_dict(), name=conn_name) as db:
+        edit(config, db)
 
 
 def edit(config: OrganizerConfig, db: DatabaseConnection):
