@@ -40,7 +40,10 @@ class DatabaseConnection:
         name: str = "DataOrganizer",
     ):
         url = f"{prefix}://{user}:{password}@{host}:{port}/{database}"
-        logger.info("Engine URL: %s", url)
+        logger.info(
+            "Engine URL: %s",
+            url.replace(":" + password + "@", ":" + len(password) * "?" + "@"),
+        )
 
         if "mysql" in prefix:
             self.backend = Backend.MYSQL
@@ -199,6 +202,9 @@ class DatabaseConnection:
                 create_statement = create_statement.unique(*unique_columns)
             if primary_columns:
                 create_statement = create_statement.primary_key(*primary_columns)
+
+            logger.info("Creating table %s", table_info.name)
+            logger.debug(create_statement.get_sql())
 
             with self.engine.connect() as connection:
                 connection.execute(create_statement.get_sql())

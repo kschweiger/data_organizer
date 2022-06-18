@@ -7,6 +7,7 @@ import click
 from data_organizer.config import OrganizerConfig
 from data_organizer.data.populator import get_table_data_from_user_input
 from data_organizer.db.connection import DatabaseConnection
+from data_organizer.utils import echo_and_log, init_logging_to_file
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ def cli(
     """
     CLI app to add data to a table defined in the passed CONFIG_FILES.
     """
+
+    init_logging_to_file("cli_edit.txt", "DEBUG")
 
     for passed_file in list(config_files) + [default_settings, secrets]:
         if not Path(f"{conf_base}/{passed_file}").is_file():
@@ -51,9 +54,15 @@ def edit(config: OrganizerConfig, db: DatabaseConnection):
             "Please enter a table",
             type=click.Choice(list(config.tables.keys())),
         )
+        logger.debug("Table %s entered", table_to_edit)
 
         if not db.has_table(config.tables[table_to_edit].name):
-            click.echo("Table %s not yet created in database")
+            echo_and_log(
+                logger.info,
+                "Table %s not yet created in database",
+                table_to_edit,
+            )
+            # click.echo("Table %s not yet created in database")
             if click.confirm("Create table?"):
                 db.create_table_from_table_info([config.tables[table_to_edit]])
 

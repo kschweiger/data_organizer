@@ -41,4 +41,5 @@ def get_table_data_from_user_input(
                 exit_input = True
             except ValueError:
                 logger.error("Invalid input for column with typ %s", column.ctype)
+    logger.debug("Read data: %s", data)
     return pd.DataFrame(data)
