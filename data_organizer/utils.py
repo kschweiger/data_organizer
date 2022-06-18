@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Union
+from typing import Callable, Tuple, Union
 
 import click
 import coloredlogs
@@ -7,36 +7,37 @@ import coloredlogs
 logger = logging.getLogger(__name__)
 
 
-def parse_level(thisLevel: Union[int, str]) -> int:
-    if thisLevel == 20 or thisLevel == "INFO":
-        return logging.INFO
-    elif thisLevel == 10 or thisLevel == "DEBUG":
-        return logging.DEBUG
-    elif thisLevel == 30 or thisLevel == "WARNING":
-        return logging.WARNING
-    elif thisLevel == 40 or thisLevel == "ERROR":
-        return logging.ERROR
-    elif thisLevel == 50 or thisLevel == "CRITICAL":
-        return logging.CRITICAL
+def parse_level(this_level: Union[int, str]) -> Tuple[int, Callable]:
+    if this_level == 20 or this_level == "INFO":
+        return logging.INFO, logging.info
+    elif this_level == 10 or this_level == "DEBUG":
+        return logging.DEBUG, logging.debug
+    elif this_level == 30 or this_level == "WARNING":
+        return logging.WARNING, logging.warning
+    elif this_level == 40 or this_level == "ERROR":
+        return logging.ERROR, logging.error
+    elif this_level == 50 or this_level == "CRITICAL":
+        return logging.CRITICAL, logging.critical
     else:
-        return logging.NOTSET
+        raise RuntimeError("%s is not supported" % this_level)
 
 
-def init_logging(thisLevel: Union[int, str]) -> bool:
+def init_logging(this_level: Union[int, str]) -> bool:
     """Helper function for setting up python logging"""
     log_format = "[%(asctime)s] %(name)-30s %(levelname)-8s %(message)s"
-    coloredlogs.install(level=parse_level(thisLevel), fmt=log_format)
+    level, _ = parse_level(this_level)
+    coloredlogs.install(level=level, fmt=log_format)
     return True
 
 
 def init_logging_to_file(file_name: str, thisLevel: Union[int, str]) -> None:
     log_format = "[%(asctime)s] %(name)-30s %(levelname)-8s %(message)s"
-    logging.basicConfig(
-        filename=file_name, format=log_format, level=parse_level(thisLevel)
-    )
+    level, _ = parse_level(thisLevel)
+    logging.basicConfig(filename=file_name, format=log_format, level=level)
 
 
-def echo_and_log(log_func: Callable, text: str, *args) -> None:
+def echo_and_log(level: Union[int, str], text: str, *args) -> None:
+    _, log_func = parse_level(level)
     if args:
         click.echo(text % args)
         log_func(text, *args)

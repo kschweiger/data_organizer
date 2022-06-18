@@ -58,7 +58,7 @@ def edit(config: OrganizerConfig, db: DatabaseConnection):
 
         if not db.has_table(config.tables[table_to_edit].name):
             echo_and_log(
-                logger.info,
+                "INFO",
                 "Table %s not yet created in database",
                 table_to_edit,
             )
