@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -13,6 +13,18 @@ class ColumnSetting(BaseModel):
     is_primary: bool = False
     is_nullable: bool = False
     is_unique: bool = False
+    default: Optional[str] = None
+
+    @property
+    def typed_default(self):
+        if self.default is None:
+            return None
+        if self.ctype == "INT":
+            return int(self.default)
+        elif self.ctype == "FLOAT":
+            return float(self.default)
+        else:
+            return self.default
 
 
 class TableSetting(BaseModel):

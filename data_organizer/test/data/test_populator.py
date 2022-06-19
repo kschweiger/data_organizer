@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -12,6 +12,7 @@ class MockColumnInfo:
     name: str
     ctype: str
     is_nullable: bool
+    default: Optional[str]
 
 
 @dataclass
@@ -20,30 +21,33 @@ class MockTableInfo:
 
 
 @pytest.mark.parametrize(
-    ("test_input", "test_ctype", "test_is_nullable", "exp_result"),
+    ("test_input", "test_ctype", "test_is_nullable", "test_default", "exp_result"),
     [
-        ("1", "INT", False, 1),
-        ("1", "Float", False, 1.0),
-        ("1", "FLOAT", False, 1.0),
-        ("1.2", "FLOAT", False, 1.2),
-        ("2022-01-01", "DATE", False, "2022-01-01"),
-        ("11:22:33", "TIME", False, "11:22:33"),
-        ("11:22", "TIME", False, "11:22"),
-        ("Some String", "VARCAR(30)", False, "Some String"),
-        ("", "VARCAR(30)", True, None),
-        ("", "INT", True, None),
-        ("", "FLOAT", True, None),
-        ("", "TIME", True, None),
-        ("", "DATE", True, None),
+        ("1", "INT", False, None, 1),
+        ("1", "Float", False, None, 1.0),
+        ("1", "FLOAT", False, None, 1.0),
+        ("1.2", "FLOAT", False, None, 1.2),
+        ("2022-01-01", "DATE", False, None, "2022-01-01"),
+        ("11:22:33", "TIME", False, None, "11:22:33"),
+        ("11:22", "TIME", False, None, "11:22"),
+        ("Some String", "VARCAR(30)", False, None, "Some String"),
+        # "" can be returned by input but not by click.prompt
+        ("", "VARCAR(30)", True, None, None),
+        ("", "INT", True, None, None),
+        ("", "FLOAT", True, None, None),
+        ("", "TIME", True, None, None),
+        ("", "DATE", True, None, None),
+        ("NULL", "VARCAR(30)", True, None, None),
+        ("NONE", "VARCAR(30)", True, None, None),
     ],
 )
 def test_get_table_data_from_user_input(
-    test_input, test_ctype, test_is_nullable, exp_result
+    test_input, test_ctype, test_is_nullable, test_default, exp_result
 ):
     mock_config = MagicMock()
     mock_config.tables = {
         "tab": MockTableInfo(
-            [MockColumnInfo("TestColumn", test_ctype, test_is_nullable)]
+            [MockColumnInfo("TestColumn", test_ctype, test_is_nullable, test_default)]
         )
     }
 
@@ -78,7 +82,7 @@ def test_get_table_data_from_user_input(
 def test_get_table_data_from_user_input_value_error(test_input, test_ctype):
     mock_config = MagicMock()
     mock_config.tables = {
-        "tab": MockTableInfo([MockColumnInfo("TestColumn", test_ctype, False)])
+        "tab": MockTableInfo([MockColumnInfo("TestColumn", test_ctype, False, None)])
     }
 
     mock_prompt_func = MagicMock()

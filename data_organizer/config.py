@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from dynaconf import Dynaconf, LazySettings, ValidationError, Validator
 
@@ -73,6 +73,9 @@ def get_settings(
 
     validate_settings(settings)
 
+    # Explicitly cast to str if the password is purely numeric
+    settings.DB.password = str(settings.DB.password)
+
     return settings
 
 
@@ -107,9 +110,9 @@ def validate_table(settings: LazySettings) -> None:
     mandatory_columns = settings.table_settings.mandatory_columns
     optional_columns = settings.table_settings.optional_columns
 
-    type_map = {"str": str, "bool": bool, "int": int, "float": float}
+    type_map = {"str": str, "bool": bool, "int": int, "float": float, "any": None}
 
-    key_types: Dict[str, type] = {
+    key_types: Dict[str, Optional[type]] = {
         key: type_map[cfg_type]
         for key, cfg_type in settings.table_settings.key_types.items()
     }
@@ -134,18 +137,20 @@ def validate_table(settings: LazySettings) -> None:
                         % (key, table, column_key)
                     )
                 # Check the type of the keys
-                if not isinstance(
-                    table_settings[key][column_key], key_types[column_key]
-                ):
-                    raise ValidationError(
-                        "%s / column %s / table %s - Wrong type. Expected %s"
-                        % (
-                            column_key,
-                            key,
-                            table,
-                            key_types[column_key],
+                if key_types[column_key] is not None:
+                    if not isinstance(
+                        table_settings[key][column_key],
+                        key_types[column_key],  # type: ignore
+                    ):
+                        raise ValidationError(
+                            "%s / column %s / table %s - Wrong type. Expected %s"
+                            % (
+                                column_key,
+                                key,
+                                table,
+                                key_types[column_key],
+                            )
                         )
-                    )
             # Check that all mandatory keys are set in each column
             if not all(
                 [
