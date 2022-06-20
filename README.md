@@ -1,7 +1,7 @@
 # Data Organzier
+[![CI](https://github.com/kschweiger/data_organizer/actions/workflows/test.yml/badge.svg)](https://github.com/kschweiger/data_organizer/actions/workflows/test.yml)
 
 Collection of general purpose and specific utilities and tools to interact with structured databases.
-
 
 
 # Configuration
@@ -34,7 +34,7 @@ tables=["table_1"]
 
 Currently supported types (that are tested to be handeled correctly) are:
 - `INT`, `FLOAT`
-- `TIME`, `DATE`
+- `TIME`, `DATE`, 'INTERVAL'
 - `VARCHAR`
 - `SERIAL`
 
@@ -42,7 +42,8 @@ Currently supported types (that are tested to be handeled correctly) are:
 Based on the list in the `tables` option. For each element a nested object as given
 above is expected. The `name` will be used in the Database. For a column, define a
 sub-element. Required is the `ctype` option. Optional are `is_primary`, `is_unique`,
-`nullable`, and `default`.
+`nullable`, and `default`. If you want to a nullable column to default to null, add
+`default="NULL"`.
 
 **Attention**: It is highly recommended to add `dynaconf_merge=true` on top of the
 additional config files. Especially if multiple tables are defined in different config
@@ -81,3 +82,5 @@ Options:
                            password).  [default: .secrets.toml]
   --help                   Show this message and exit.
 ```
+
+Inputting `""`, `"NULL"`, or `"NONE"` will insert NULL into the table.
