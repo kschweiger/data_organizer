@@ -72,6 +72,26 @@ def get_table_data_from_user_input(
                         )
                         if len(column_input) == 2:
                             raise ValueError("HH format not supported")
+                    elif column.ctype.upper() == "INTERVAL":
+                        add_err_info = "Only HH:MM:SS or HH:MM formats are supported "
+                        column_input = column_input.replace(" ", "")
+                        if ":" not in column_input:
+                            raise ValueError
+                        elems = column_input.split(":")
+                        if not (len(elems) == 2 or len(elems) == 3):
+                            raise ValueError
+                        for i, elem in enumerate(elems):
+                            # Raise value error if element can not be converted to int
+                            if elem == "":
+                                add_err_info = "Element %s is empty" % i
+                                raise ValueError
+
+                            int_elem = int(elem)
+                            if i != 0:
+                                if int_elem >= 60:
+                                    add_err_info = "Element %s must be < 59" % i
+                                    raise ValueError
+
                     else:
                         pass
                 data[column.name] = [column_input]

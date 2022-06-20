@@ -30,6 +30,8 @@ class MockTableInfo:
         ("2022-01-01", "DATE", False, None, "2022-01-01"),
         ("11:22:33", "TIME", False, None, "11:22:33"),
         ("11:22", "TIME", False, None, "11:22"),
+        ("11:22:33", "INTERVAL", False, None, "11:22:33"),
+        ("11:22", "INTERVAL", False, None, "11:22"),
         ("Some String", "VARCAR(30)", False, None, "Some String"),
         # "" can be returned by input but not by click.prompt
         ("", "VARCAR(30)", True, None, None),
@@ -77,6 +79,14 @@ def test_get_table_data_from_user_input(
         ("10:75:00", "TIME"),  # invalid Minutes
         ("10:10:69", "TIME"),  # invalid Seconds
         ("Some String", "TIME"),
+        ("Some String", "INTERVAL"),
+        ("11:69:11", "INTERVAL"),  # MM > 59
+        ("11:69", "INTERVAL"),  # MM > 59
+        ("11:11:69", "INTERVAL"),  # SS > 59
+        ("110251", "INTERVAL"),  # No : in input
+        ("11:11:", "INTERVAL"),  # element 1 is empty str
+        ("11:", "INTERVAL"),  # element 1 is empty str
+        ("11:11:11:21", "INTERVAL"),  # SS > 59
     ],
 )
 def test_get_table_data_from_user_input_value_error(test_input, test_ctype):
