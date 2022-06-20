@@ -14,9 +14,26 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.argument("config_files", nargs=-1)
-@click.option("--conf_base", default="conf/", show_default=True)
-@click.option("--default_settings", default="settings.toml", show_default=True)
-@click.option("--secrets", default=".secrets.toml", show_default=True)
+@click.option(
+    "--conf_base",
+    default="conf/",
+    show_default=True,
+    help="Base directory containing all config files. All other condif file paths will "
+    "be interpreted relative to this",
+)
+@click.option(
+    "--default_settings",
+    default="settings.toml",
+    show_default=True,
+    help="Main settings file defining e.g. DB options and table configuration. Pass "
+    "the file relative to --conf_base.",
+)
+@click.option(
+    "--secrets",
+    default=".secrets.toml",
+    show_default=True,
+    help="File containing the secrets (e.g. Database password).",
+)
 def cli(
     config_files: Tuple[str, ...], conf_base: str, default_settings: str, secrets: str
 ):

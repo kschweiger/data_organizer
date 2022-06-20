@@ -33,6 +33,8 @@ def get_table_data_from_user_input(
     for column in config.tables[table].columns:
         exit_input = False
         add_err_info = None
+        if column.ctype.upper() in config.settings.table_settings.auto_fill_ctypes:
+            continue
         while not exit_input:
             try:
                 prompt_text = "Input value for %s: " % column.name

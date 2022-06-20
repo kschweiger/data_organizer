@@ -9,6 +9,7 @@ schema="data_organization"
 [table_settings]
 mandatory_columns = ["ctype"]
 optional_columns = ["is_primary", "is_unique", "is_nullable", "default"]
+auto_fill_ctypes = ["SERIAL"]
 [table_settings.key_types]
     ctype="str"
     is_primary="bool"
