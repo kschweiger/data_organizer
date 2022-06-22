@@ -2,12 +2,18 @@ import os
 import uuid
 
 import pandas as pd
+import psycopg2
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
 from data_organizer.db.connection import Backend, DatabaseConnection
-from data_organizer.db.exceptions import QueryReturnedNoData, TableNotExists
+from data_organizer.db.exceptions import (
+    BinaryDataException,
+    InvalidDataException,
+    QueryReturnedNoData,
+    TableNotExists,
+)
 from data_organizer.db.model import ColumnSetting, TableSetting
 from data_organizer.utils import init_logging
 
@@ -226,4 +232,106 @@ def test_underscore_insert(db, test_table_create_drop, data, exp_ids):
 
     assert not ids_pre_insert.equals(ids_post_insert)
 
+    assert ids_post_insert.id.to_list() == exp_ids
+
+
+def test_preprocess_data_for_insert_w_serial(db):
+    cols = {
+        "A": {"ctype": "SERIAL", "is_primary": True, "is_inserted": False},
+        "B": {"ctype": "INT"},
+        "C": {"ctype": "INT"},
+    }
+    table_settings = TableSetting(
+        name="table_from_info_" + str(uuid.uuid4()).replace("-", "_"),
+        columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
+    )
+
+    in_data = [[2, 3]]
+    processed_data = db._preprocess_data_for_insert(table_settings, in_data)
+
+    assert len(processed_data[0]) == len(cols.keys()) - 1
+    assert processed_data == in_data
+
+
+def test_preprocess_data_for_insert_w_byte(db):
+    cols = {
+        "A": {"ctype": "INT", "is_primary": True},
+        "B": {"ctype": "BYTEA"},
+    }
+    table_settings = TableSetting(
+        name="table_from_info_" + str(uuid.uuid4()).replace("-", "_"),
+        columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
+    )
+
+    in_data = [[2, "abcdefg".encode()]]
+    processed_data = db._preprocess_data_for_insert(table_settings, in_data)
+    exp_data = [[2, str(psycopg2.Binary("abcdefg".encode()))]]
+    processed_data[0][1] = str(processed_data[0][1])
+
+    assert len(processed_data[0]) == len(cols.keys())
+    assert processed_data == exp_data
+
+
+def test_preprocess_data_for_insert_w_byte_error(db):
+    cols = {
+        "A": {"ctype": "INT", "is_primary": True},
+        "B": {"ctype": "BYTEA"},
+    }
+    table_settings = TableSetting(
+        name="table_from_info_" + str(uuid.uuid4()).replace("-", "_"),
+        columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
+    )
+
+    in_data = [[2, "abcdefg"]]
+    with pytest.raises(BinaryDataException):
+        db._preprocess_data_for_insert(table_settings, in_data)
+
+
+def test_preprocess_data_for_insert_invalid_data_error(db):
+    cols = {
+        "A": {"ctype": "INT", "is_primary": True},
+        "B": {"ctype": "INT"},
+    }
+    table_settings = TableSetting(
+        name="table_from_info_" + str(uuid.uuid4()).replace("-", "_"),
+        columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
+    )
+
+    in_data = [[2, 2, 3]]
+    with pytest.raises(InvalidDataException):
+        db._preprocess_data_for_insert(table_settings, in_data)
+
+
+def test_insert(db, test_table_create_drop):
+
+    cols = {
+        "id": {"ctype": "VARCHAR(255)", "is_primary": True},
+        "col1": {"ctype": "FLOAT"},
+        "col2": {"ctype": "FLOAT"},
+    }
+    table_settings = TableSetting(
+        name=test_table_create_drop,
+        columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
+    )
+
+    data = [["ABC", 2.5, 5.2]]
+    exp_ids = ["A", "B", "C", "D", "ABC"]
+    ids_pre_insert = db.query_to_df(
+        f"""
+        SELECT t.id
+        FROM {test_table_create_drop} t
+        """
+    )
+
+    success, _ = db.insert(table_settings, data)
+    assert success
+
+    ids_post_insert = db.query_to_df(
+        f"""
+        SELECT t.id
+        FROM {test_table_create_drop} t
+        """
+    )
+
+    assert not ids_pre_insert.equals(ids_post_insert)
     assert ids_post_insert.id.to_list() == exp_ids

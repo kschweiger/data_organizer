@@ -3,13 +3,19 @@ from enum import Enum, auto
 from typing import Any, List, Optional, Tuple
 
 import pandas as pd
+import psycopg2
 from pypika import Dialects, MySQLQuery, PostgreSQLQuery
 from pypika.queries import Column, CreateQueryBuilder, Table
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError, OperationalError
 
-from data_organizer.db.exceptions import QueryReturnedNoData, TableNotExists
+from data_organizer.db.exceptions import (
+    BinaryDataException,
+    InvalidDataException,
+    QueryReturnedNoData,
+    TableNotExists,
+)
 from data_organizer.db.model import ColumnSetting, TableSetting
 
 logger = logging.getLogger(__name__)
@@ -151,6 +157,59 @@ class DatabaseConnection:
             err_str = str(e)
 
         return data_inserted, err_str
+
+    def insert(
+        self, table: TableSetting, datas: List[List[Any]]
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Main insert method that includes validation and processing steps against the
+        passed TableSettings objects.
+
+        Args:
+            table: TableSetting object defining the table data is inserted into
+            datas: Data to be inserted
+
+        Returns: Boolean flag denoting success of the insertion and Optional string
+                 specifying the error
+        """
+        processed_data = self._preprocess_data_for_insert(table, datas)
+
+        return self._insert(table.name, processed_data)
+
+    def _preprocess_data_for_insert(
+        self, table: TableSetting, datas: List[List[Any]]
+    ) -> List[List[Any]]:
+        """
+        Preprocess the passed data for insertion
+
+        Args:
+            table: TableSetting object defining the table data is inserted into
+            datas: Data to be inserted
+
+        Returns: Preprocessed data
+        """
+        processed_data = []
+        for data in datas:
+            this_processed_data = []
+            insert_columns = [c for c in table.columns if c.is_inserted]
+            if len(data) != len(insert_columns):
+                raise InvalidDataException(
+                    "Number of passed data does not match number of columns expected"
+                )
+            for column, value in zip(insert_columns, data):
+                if column.ctype == "BYTEA" and self.backend == Backend.POSTGRES:
+                    value = psycopg2.Binary(value)
+                    try:
+                        str(value)
+                    except TypeError:
+                        raise BinaryDataException(
+                            "Value for column %s could not be converted to "
+                            "binary properly" % column.name
+                        )
+                this_processed_data.append(value)
+            processed_data.append(this_processed_data)
+
+        return processed_data
 
     def _insert(
         self, table_name: str, data: List[List[Any]]
