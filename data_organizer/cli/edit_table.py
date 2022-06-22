@@ -150,7 +150,7 @@ def insert_relative(
                 ORDER BY {common_column} DESC
                 LIMIT 1;
             """
-            last_id = db.query_to_df(sql)["id_table"].iloc[0]
+            last_id = db.query_to_df(sql)[common_column].iloc[0]
 
             # Ask for user input that will be filled in the relative table
             data_to_add_rel = get_table_data_from_user_input(

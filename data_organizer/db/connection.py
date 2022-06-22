@@ -1,5 +1,6 @@
 import logging
 from enum import Enum, auto
+from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 import pandas as pd
@@ -198,6 +199,15 @@ class DatabaseConnection:
                 )
             for column, value in zip(insert_columns, data):
                 if column.ctype == "BYTEA" and self.backend == Backend.POSTGRES:
+                    if isinstance(value, str):
+                        print(Path(value), Path(value).exists())
+                        if Path(value).exists():
+                            logger.debug(
+                                "Passed value for BYTEA column is a valid path. "
+                                "Assuming to read and insert content"
+                            )
+                            with open(value, "r") as f:
+                                value = f.read()
                     value = psycopg2.Binary(value)
                     try:
                         str(value)

@@ -272,6 +272,29 @@ def test_preprocess_data_for_insert_w_byte(db):
     assert processed_data == exp_data
 
 
+def test_preprocess_data_for_insert_w_byte_file(mocker, db):
+    mocker.patch("builtins.open", mocker.mock_open(read_data="some_byte_str".encode()))
+    from pathlib import Path
+
+    mocker.patch.object(Path, "exists", return_value=True)
+    cols = {
+        "A": {"ctype": "INT", "is_primary": True},
+        "B": {"ctype": "BYTEA"},
+    }
+    table_settings = TableSetting(
+        name="table_from_info_" + str(uuid.uuid4()).replace("-", "_"),
+        columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
+    )
+
+    in_data = [[2, "/path/to/file"]]
+    processed_data = db._preprocess_data_for_insert(table_settings, in_data)
+    exp_data = [[2, str(psycopg2.Binary("some_byte_str".encode()))]]
+    processed_data[0][1] = str(processed_data[0][1])
+
+    assert len(processed_data[0]) == len(cols.keys())
+    assert processed_data == exp_data
+
+
 def test_preprocess_data_for_insert_w_byte_error(db):
     cols = {
         "A": {"ctype": "INT", "is_primary": True},
