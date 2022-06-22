@@ -2,10 +2,11 @@ dynaconf_merge=true
 tables=["table_1"]
 
 [table_1]
-    name="possibly_longer_name_for_table_1"
+    name="table_with_serial_column"
     [table_1.A]
+        ctype="SERIAL"
         is_primary=true
-        is_unique=true
-        is_nullable=true
     [table_1.B]
+        ctype="INT"
+    [table_1.C]
         ctype="INT"

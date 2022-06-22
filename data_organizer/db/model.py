@@ -13,6 +13,7 @@ class ColumnSetting(BaseModel):
     is_primary: bool = False
     is_nullable: bool = False
     is_unique: bool = False
+    is_inserted: bool = True
     default: Optional[str] = None
 
     @property

@@ -8,6 +8,6 @@ tables=["table_1"]
         bugus_key=true
         is_primary=true
         is_unique=true
-        nullable=true
+        is_nullable=true
     [table_1.B]
         ctype="INT"

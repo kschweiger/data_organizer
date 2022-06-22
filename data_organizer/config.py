@@ -28,9 +28,15 @@ class OrganizerConfig:
         self.tables: Dict[str, TableSetting] = {}
         if self.settings.tables:
             for table in self.settings.tables:
-                self.tables[table] = get_table_setting_from_dict(
-                    self.settings[table].to_dict()
-                )
+                table_dict = self.settings[table].to_dict()
+                for key in table_dict.keys():
+                    if isinstance(table_dict[key], dict):
+                        if (
+                            table_dict[key]["ctype"]
+                            in self.settings.table_settings.auto_fill_ctypes
+                        ):
+                            table_dict[key].update({"is_inserted": False})
+                self.tables[table] = get_table_setting_from_dict(table_dict)
 
 
 def get_settings(

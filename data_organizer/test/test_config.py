@@ -90,3 +90,25 @@ def test_organizer_rel_tables(monkeypatch):
 
     for _, info in config.tables.items():
         assert isinstance(info, TableSetting)
+
+
+def test_organizer_is_inserted_auto_fill_cols(monkeypatch):
+    test_pw = "abcd"
+    monkeypatch.setenv("CONFIGTEST_DB__PASSWORD", test_pw)
+    config = OrganizerConfig(
+        "CONFIGTEST",
+        config_dir_base="data_organizer/test/conf",
+        secrets="",
+        additional_configs=["test_table_good_serial.toml"],
+    )
+
+    for _, info in config.tables.items():
+        has_serial_column = False
+        for column in info.columns:
+            if column.ctype == "SERIAL":
+                assert not column.is_inserted
+                has_serial_column = True
+            else:
+                assert column.is_inserted
+
+        assert has_serial_column
