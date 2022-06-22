@@ -103,7 +103,7 @@ class DatabaseConnection:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def query(self, sql: str) -> pd.DataFrame:
+    def query_to_df(self, sql: str) -> pd.DataFrame:
         """
         Function wrapping a SQL query using the engine
 
@@ -119,7 +119,7 @@ class DatabaseConnection:
 
         return data
 
-    def insert(
+    def insert_df(
         self, table_name: str, data: pd.DataFrame, if_exists: str = "append"
     ) -> Tuple[bool, Optional[str]]:
         """

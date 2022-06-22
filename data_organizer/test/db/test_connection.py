@@ -93,7 +93,7 @@ def test_DatabaseConnection_init_invalid():
 
 
 def test_query(db, test_table_create_drop):
-    this_data = db.query(
+    this_data = db.query_to_df(
         f"""
         SELECT *
         FROM {test_table_create_drop} t
@@ -104,7 +104,7 @@ def test_query(db, test_table_create_drop):
     assert not this_data.empty
 
     with pytest.raises(QueryReturnedNoData):
-        db.query(
+        db.query_to_df(
             f"""
             SELECT *
             FROM {test_table_create_drop} t
@@ -116,11 +116,11 @@ def test_query(db, test_table_create_drop):
 def test_insert_append(db, test_table_create_drop):
     data_to_insert = pd.DataFrame({"id": ["E"], "col1": [222.0], "col2": [222.0]})
 
-    db.insert(
+    db.insert_df(
         table_name=test_table_create_drop, data=data_to_insert, if_exists="append"
     )
 
-    inserted_data = db.query(
+    inserted_data = db.query_to_df(
         f"""
         SELECT *
         FROM {test_table_create_drop} t
@@ -129,7 +129,7 @@ def test_insert_append(db, test_table_create_drop):
     )
     assert data_to_insert.equals(inserted_data)
 
-    all_data = db.query(
+    all_data = db.query_to_df(
         f"""
         SELECT *
         FROM {test_table_create_drop} t
@@ -139,7 +139,7 @@ def test_insert_append(db, test_table_create_drop):
     assert not data_to_insert.equals(all_data)
 
     with pytest.raises(TableNotExists):
-        db.insert(table_name="bogus_table", data=data_to_insert, if_exists="append")
+        db.insert_df(table_name="bogus_table", data=data_to_insert, if_exists="append")
 
 
 def test_create_from_table_info(db):
@@ -183,7 +183,7 @@ def test_DatabaseConnection_schema():
         f"CREATE TABLE {test_table_name} (id INT NOT NULL, col FLOAT NOT NULL)"
     )
 
-    tables = db.query(
+    tables = db.query_to_df(
         """
         SELECT table_name, MAX(table_schema) AS schema_name
         FROM information_schema.columns  AS tables

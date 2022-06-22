@@ -98,7 +98,7 @@ def edit_table(config: OrganizerConfig, db: DatabaseConnection, table: str):
             data_to_add = get_table_data_from_user_input(
                 config, table, prompt_func=click.prompt
             )
-            success, err = db.insert(config.tables[table].name, data_to_add)
+            success, err = db.insert_df(config.tables[table].name, data_to_add)
             # TODO: Error is printed twice. Error and warning from logging still shown
             if not success:
                 click.echo("Data could not be inserted: %s" % err)
@@ -150,7 +150,7 @@ def insert_relative(
                 ORDER BY {common_column} DESC
                 LIMIT 1;
             """
-            last_id = db.query(sql)["id_table"].iloc[0]
+            last_id = db.query_to_df(sql)["id_table"].iloc[0]
 
             # Ask for user input that will be filled in the relative table
             data_to_add_rel = get_table_data_from_user_input(
@@ -159,7 +159,7 @@ def insert_relative(
                 prompt_func=click.prompt,
                 set_values={common_column: last_id},
             )
-            success, err = db.insert(
+            success, err = db.insert_df(
                 config.tables[rel_table_name].name, data_to_add_rel
             )
             if not success:
