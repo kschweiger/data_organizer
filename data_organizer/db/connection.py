@@ -1,10 +1,10 @@
 import logging
 from enum import Enum, auto
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import pandas as pd
-from pypika import Dialects
-from pypika.queries import Column, CreateQueryBuilder
+from pypika import Dialects, MySQLQuery, PostgreSQLQuery
+from pypika.queries import Column, CreateQueryBuilder, Table
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -48,9 +48,11 @@ class DatabaseConnection:
         if "mysql" in prefix:
             self.backend = Backend.MYSQL
             self.dialect = Dialects.MYSQL
+            self.pypika_query = MySQLQuery
         elif "postgresql" in prefix:
             self.backend = Backend.POSTGRES
             self.dialect = Dialects.POSTGRESQL
+            self.pypika_query = PostgreSQLQuery
         else:
             raise NotImplementedError(
                 "Currently only %s are supported as backends"
@@ -147,6 +149,40 @@ class DatabaseConnection:
             logger.error("Data could not be inserted: %s", str(e))
             data_inserted = False
             err_str = str(e)
+
+        return data_inserted, err_str
+
+    def _insert(
+        self, table_name: str, data: List[List[Any]]
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        General purpose insert into database. Only using table_name and a lists
+        of values.
+
+        Args:
+            table_name: Valid table name
+            data: List containing Lists with valid values to insert
+
+        Returns: Boolean flag denoting success of the insertion and Optional string
+                 specifying the error
+        """
+        table = Table(table_name)
+
+        insert_statement = self.pypika_query.into(table)
+        for d in data:
+            insert_statement = insert_statement.insert(*d)
+
+        logger.debug(insert_statement.get_sql())
+
+        data_inserted = True
+        err_str = None
+        with self.engine.connect() as connection:
+            try:
+                connection.execute(insert_statement.get_sql())
+            except IntegrityError as e:
+                logger.error("Data could not be inserted: %s", str(e))
+                data_inserted = False
+                err_str = str(e)
 
         return data_inserted, err_str
 

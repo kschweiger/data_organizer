@@ -197,3 +197,33 @@ def test_DatabaseConnection_schema():
     db.engine.execute(f"DROP SCHEMA {db.schema}")
 
     db.close()
+
+
+@pytest.mark.parametrize(
+    ("data", "exp_ids"),
+    [
+        ([["E", 222.2, 111.1]], ["A", "B", "C", "D", "E"]),
+        ([["X", 888.8, 999.9], ["Y", 777.7, 666.6]], ["A", "B", "C", "D", "X", "Y"]),
+    ],
+)
+def test_underscore_insert(db, test_table_create_drop, data, exp_ids):
+    ids_pre_insert = db.query_to_df(
+        f"""
+            SELECT t.id
+            FROM {test_table_create_drop} t
+            """
+    )
+
+    success, _ = db._insert(test_table_create_drop, data)
+    assert success
+
+    ids_post_insert = db.query_to_df(
+        f"""
+        SELECT t.id
+        FROM {test_table_create_drop} t
+        """
+    )
+
+    assert not ids_pre_insert.equals(ids_post_insert)
+
+    assert ids_post_insert.id.to_list() == exp_ids
