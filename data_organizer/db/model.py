@@ -32,6 +32,8 @@ class TableSetting(BaseModel):
 
     name: str
     columns: List[ColumnSetting]
+    rel_table: Optional[str] = None
+    rel_table_common_column: Optional[str] = None
 
 
 def get_table_setting_from_dict(
@@ -49,11 +51,19 @@ def get_table_setting_from_dict(
     Returns: A validated TableSetting object wiht defaults.
     """
     column_data: Dict[str, ColumnConfigType] = {
-        key: item for key, item in data.items() if key != "name"  # type: ignore
+        key: item  # type: ignore
+        for key, item in data.items()
+        if isinstance(data[key], dict)
     }
 
     return TableSetting(
         name=data["name"],
+        rel_table=data["rel_table"] if "rel_table" in data.keys() else None,
+        rel_table_common_column=(
+            data["rel_table_common_column"]
+            if "rel_table_common_column" in data.keys()
+            else None
+        ),
         columns=[
             ColumnSetting(name=key, **items) for key, items in column_data.items()
         ],

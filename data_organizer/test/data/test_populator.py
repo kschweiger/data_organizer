@@ -100,3 +100,19 @@ def test_get_table_data_from_user_input_value_error(test_input, test_ctype):
 
     with pytest.raises(ValueError):  # noqa: PT011
         get_table_data_from_user_input(mock_config, "tab", mock_prompt_func, debug=True)
+
+
+def test_get_table_data_from_user_input_pre_set():
+    mock_config = MagicMock()
+    mock_config.tables = {
+        "tab": MockTableInfo([MockColumnInfo("TestColumn", "INT", False, None)])
+    }
+
+    mock_prompt_func = MagicMock()
+
+    result = get_table_data_from_user_input(
+        mock_config, "tab", mock_prompt_func, set_values={"TestColumn": 200}, debug=True
+    )
+
+    assert mock_prompt_func.call_count == 0
+    assert result["TestColumn"].iloc[0] == 200

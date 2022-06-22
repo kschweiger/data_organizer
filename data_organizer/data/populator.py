@@ -13,6 +13,7 @@ def get_table_data_from_user_input(
     config: OrganizerConfig,
     table: str,
     prompt_func: Callable[..., str] = input,
+    set_values: Dict[str, Union[str, int, float]] = {},
     use_promp_default_arg: bool = True,
     debug: bool = False,
 ) -> pd.DataFrame:
@@ -43,25 +44,31 @@ def get_table_data_from_user_input(
                         column.name,
                         column.default,
                     )
-                if use_promp_default_arg and column.default is not None:
-                    column_input = prompt_func(prompt_text, default=column.default)
+                column_input_prompt: str
+                if column.name in set_values.keys():
+                    column_input_prompt = str(set_values[column.name])
                 else:
-                    column_input = prompt_func(prompt_text)
+                    if use_promp_default_arg and column.default is not None:
+                        column_input_prompt = prompt_func(
+                            prompt_text, default=column.default
+                        )
+                    else:
+                        column_input_prompt = prompt_func(prompt_text)
                 if column.is_nullable and (
-                    column_input == ""
-                    or column_input.upper() == "NULL"
-                    or column_input.upper() == "NONE"
+                    column_input_prompt == ""
+                    or column_input_prompt.upper() == "NULL"
+                    or column_input_prompt.upper() == "NONE"
                 ):
                     column_input = None
-                elif column.default is not None and column_input == "":
+                elif column.default is not None and column_input_prompt == "":
                     column_input = column.typed_default
                 elif column.ctype.upper() == "INT":
-                    column_input = int(column_input)
+                    column_input = int(column_input_prompt)
                 elif column.ctype.upper() == "FLOAT":
-                    column_input = float(column_input)
+                    column_input = float(column_input_prompt)
                 else:
                     # For some types additional checks should be executed
-                    column_input = str(column_input)
+                    column_input = str(column_input_prompt)
                     if column.ctype.upper() == "DATE":
                         date.fromisoformat(column_input)
                         add_err_info = "Use YYYY-MM-DD (iso format) for DATE columns"

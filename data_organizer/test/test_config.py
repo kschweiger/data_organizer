@@ -45,6 +45,9 @@ def test_get_config_table_good(monkeypatch):
         "test_table_unexp_key.toml",
         "test_table_unexp_key_type.toml",
         "test_table_wrong_type.toml",
+        "test_table_rel_not_defined.toml",
+        "test_table_common_not_defined.toml",
+        "test_table_common_not_valid.toml",
     ],
 )
 def test_get_config_table_error(monkeypatch, table_file_name):
@@ -71,5 +74,19 @@ def test_organizer_config_tables(monkeypatch):
 
     assert isinstance(config.tables, dict)
     assert len(config.tables.keys()) >= 1
+    for _, info in config.tables.items():
+        assert isinstance(info, TableSetting)
+
+
+def test_organizer_rel_tables(monkeypatch):
+    test_pw = "abcd"
+    monkeypatch.setenv("CONFIGTEST_DB__PASSWORD", test_pw)
+    config = OrganizerConfig(
+        "CONFIGTEST",
+        config_dir_base="data_organizer/test/conf",
+        secrets="",
+        additional_configs=["test_table_good_w_rel.toml"],
+    )
+
     for _, info in config.tables.items():
         assert isinstance(info, TableSetting)

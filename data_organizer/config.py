@@ -117,12 +117,42 @@ def validate_table(settings: LazySettings) -> None:
         for key, cfg_type in settings.table_settings.key_types.items()
     }
 
+    top_level_table_options = ["name", "rel_table", "rel_table_common_column"]
+
     for table in settings.tables:
         table_settings = settings[table]
         # Check if table as a name
         if "name" not in table_settings.keys():
             raise ValidationError("name not defined in table %s" % table)
-        for key in [key for key in table_settings.keys() if key != "name"]:
+        if "rel_table" in table_settings.keys():
+            if table_settings["rel_table"] not in settings.tables:
+                raise ValidationError(
+                    "**%s** set as rel_table in **%s** "
+                    % (table_settings["rel_table"], table),
+                    "but **%s** is not defined in tables" % table_settings["rel_table"],
+                )
+            if "rel_table_common_column" not in table_settings.keys():
+                raise ValidationError(
+                    "rel_table_common_column has to be set because "
+                    "rel_table is set in **%s**" % table
+                )
+
+            if (
+                table_settings["rel_table_common_column"]
+                not in settings[table_settings["rel_table"]].keys()
+            ):
+                raise ValidationError(
+                    "Common column **%s** set in table **%s** not present in **%s**"
+                    % (
+                        table_settings["rel_table_common_column"],
+                        table,
+                        table_settings["rel_table"],
+                    )
+                )
+
+        for key in [
+            key for key in table_settings.keys() if key not in top_level_table_options
+        ]:
             # Check that the item for all other keys is a dict
             if not isinstance(table_settings[key], dict):
                 raise ValidationError(

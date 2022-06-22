@@ -102,11 +102,68 @@ def edit_table(config: OrganizerConfig, db: DatabaseConnection, table: str):
             # TODO: Error is printed twice. Error and warning from logging still shown
             if not success:
                 click.echo("Data could not be inserted: %s" % err)
+            if success and config.tables[table].rel_table:
+                insert_relative(config, db, table)
 
         if click.confirm(
             "Are you finished applying actions to this table?", default=True
         ):
             exit_cond_met = True
+
+
+def insert_relative(
+    config: OrganizerConfig, db: DatabaseConnection, table: str
+) -> None:
+    """
+    Insert data into a relative table. Is expected to be called directly after inserting
+    the data in the main table because the last value of the common column is queries
+    from the database.
+
+    Args:
+        config: Config with relative table
+        db: Database for insertion
+        table: Name of the main table
+    """
+    # At this point rel_table_name is ensured to be a string
+    main_table = config.tables[table]
+    rel_table_name: str = main_table.rel_table  # type: ignore
+    if click.confirm("Also add data to relative table %s" % main_table.rel_table):
+        # Check if relative table has be created previously
+        if not db.has_table(config.tables[rel_table_name].name):
+            echo_and_log(
+                "INFO",
+                "Table %s not yet created in database",
+                rel_table_name,
+            )
+            if click.confirm("Create table?"):
+                db.create_table_from_table_info([config.tables[rel_table_name]])
+
+        # Check again. Mainly used to skip adding of ^^^ confirm was denied
+        if db.has_table(config.tables[rel_table_name].name):
+            common_column: str = main_table.rel_table_common_column  # type: ignore
+            # We need the value for the common column. In principle could be taken from
+            # inserted data but querying is save for SERIAL values that are only set
+            # at insertion time
+            sql = f"""
+                SELECT {common_column}
+                FROM {db.schema}.{config.tables[rel_table_name].name}
+                ORDER BY {common_column} DESC
+                LIMIT 1;
+            """
+            last_id = db.query(sql)["id_table"].iloc[0]
+
+            # Ask for user input that will be filled in the relative table
+            data_to_add_rel = get_table_data_from_user_input(
+                config,
+                rel_table_name,
+                prompt_func=click.prompt,
+                set_values={common_column: last_id},
+            )
+            success, err = db.insert(
+                config.tables[rel_table_name].name, data_to_add_rel
+            )
+            if not success:
+                click.echo("Data could not be inserted: %s" % err)
 
 
 if __name__ == "__main__":

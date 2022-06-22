@@ -1,0 +1,12 @@
+dynaconf_merge=true
+tables=["table_1"]
+
+[table_1]
+    name="possibly_longer_name_for_table_1"
+    rel_table="table_rel_to_1"
+    rel_table_common_column="id_table"
+    [table_1.id_table]
+        ctype="INT"
+        is_primary=true
+    [table_1.value]
+        ctype="INT"
