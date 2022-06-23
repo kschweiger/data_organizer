@@ -1,6 +1,6 @@
 import logging
 from datetime import date, time
-from typing import Callable, Dict, List, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 import pandas as pd
 
@@ -8,29 +8,20 @@ from data_organizer.config import OrganizerConfig
 
 logger = logging.getLogger(__name__)
 
+column_input_type = Union[None, str, float, int]
+
 
 def get_table_data_from_user_input(
     config: OrganizerConfig,
     table: str,
     prompt_func: Callable[..., str] = input,
     set_values: Dict[str, Union[str, int, float]] = {},
-    use_promp_default_arg: bool = True,
+    use_prompt_default_arg: bool = True,
     debug: bool = False,
-) -> pd.DataFrame:
-    """
-    Get user input for all columns in the table.
-
-    Args:
-        prompt_func: Function used to get the user input. E.g. input()
-        config: OrganizerConfig object with tables
-        table: Name of the table
-        debug: Flag enabling a strict error checking mode that will raise the ValueError
-
-    Returns: User inputted data in DataFrame
-    """
-
-    data: Dict[str, List[Union[None, str, float, int]]] = {}
-    column_input: Union[None, str, float, int]
+) -> Tuple[List[str], List[column_input_type]]:
+    columns: List[str] = []
+    values: List[column_input_type] = []
+    column_input: column_input_type
     for column in config.tables[table].columns:
         exit_input = False
         add_err_info = None
@@ -39,7 +30,7 @@ def get_table_data_from_user_input(
         while not exit_input:
             try:
                 prompt_text = "Input value for %s: " % column.name
-                if column.default is not None and not use_promp_default_arg:
+                if column.default is not None and not use_prompt_default_arg:
                     prompt_text = "Input value for %s (Default: %s): " % (
                         column.name,
                         column.default,
@@ -48,7 +39,7 @@ def get_table_data_from_user_input(
                 if column.name in set_values.keys():
                     column_input_prompt = str(set_values[column.name])
                 else:
-                    if use_promp_default_arg and column.default is not None:
+                    if use_prompt_default_arg and column.default is not None:
                         column_input_prompt = prompt_func(
                             prompt_text, default=column.default
                         )
@@ -101,7 +92,8 @@ def get_table_data_from_user_input(
 
                     else:
                         pass
-                data[column.name] = [column_input]
+                columns.append(column.name)
+                values.append(column_input)
                 exit_input = True
             except ValueError as e:
                 logger.error("Invalid input for column with typ %s", column.ctype)
@@ -109,5 +101,44 @@ def get_table_data_from_user_input(
                     logger.error(add_err_info)
                 if debug:
                     raise e
-    logger.debug("Read data: %s", data)
+    logger.debug("Read VALUES %s", values)
+    return columns, values
+
+
+def get_table_data_df_from_user_input(
+    config: OrganizerConfig,
+    table: str,
+    prompt_func: Callable[..., str] = input,
+    set_values: Dict[str, Union[str, int, float]] = {},
+    use_prompt_default_arg: bool = True,
+    debug: bool = False,
+) -> pd.DataFrame:
+    """
+    Get user input for all columns in the table.
+
+    Args:
+        prompt_func: Function used to get the user input. E.g. input()
+        config: OrganizerConfig object with tables
+        table: Name of the table
+        set_values: Pre-set values that would be prompted otherwise
+        use_prompt_default_arg: Flag determining if the *default* arg should be passed
+                               to the prompt_func. No check is made to make sure this
+                               is valid.
+        debug: Flag enabling a strict error checking mode that will raise the ValueError
+
+    Returns: User inputted data in DataFrame
+    """
+    columns, values = get_table_data_from_user_input(
+        config=config,
+        table=table,
+        prompt_func=prompt_func,
+        set_values=set_values,
+        use_prompt_default_arg=use_prompt_default_arg,
+        debug=debug,
+    )
+
+    data: Dict[str, List[column_input_type]] = {}
+    for column, value in zip(columns, values):
+        data[column] = [value]
+
     return pd.DataFrame(data)

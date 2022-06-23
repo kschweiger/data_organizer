@@ -206,13 +206,18 @@ def test_DatabaseConnection_schema():
 
 
 @pytest.mark.parametrize(
-    ("data", "exp_ids"),
+    ("data", "columns", "exp_ids"),
     [
-        ([["E", 222.2, 111.1]], ["A", "B", "C", "D", "E"]),
-        ([["X", 888.8, 999.9], ["Y", 777.7, 666.6]], ["A", "B", "C", "D", "X", "Y"]),
+        ([["E", 222.2, 111.1]], ["id", "col1", "col2"], ["A", "B", "C", "D", "E"]),
+        ([["E", 222.2, 111.1]], None, ["A", "B", "C", "D", "E"]),
+        (
+            [["X", 888.8, 999.9], ["Y", 777.7, 666.6]],
+            ["id", "col1", "col2"],
+            ["A", "B", "C", "D", "X", "Y"],
+        ),
     ],
 )
-def test_underscore_insert(db, test_table_create_drop, data, exp_ids):
+def test_underscore_insert(db, test_table_create_drop, data, columns, exp_ids):
     ids_pre_insert = db.query_to_df(
         f"""
             SELECT t.id
@@ -220,7 +225,7 @@ def test_underscore_insert(db, test_table_create_drop, data, exp_ids):
             """
     )
 
-    success, _ = db._insert(test_table_create_drop, data)
+    success, _ = db._insert(test_table_create_drop, columns, data)
     assert success
 
     ids_post_insert = db.query_to_df(

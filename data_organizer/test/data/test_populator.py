@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from data_organizer.data.populator import get_table_data_from_user_input
+from data_organizer.data.populator import get_table_data_df_from_user_input
 
 
 @dataclass
@@ -56,7 +56,7 @@ def test_get_table_data_from_user_input(
     mock_prompt_func = MagicMock()
     mock_prompt_func.return_value = test_input
 
-    result = get_table_data_from_user_input(
+    result = get_table_data_df_from_user_input(
         mock_config, "tab", mock_prompt_func, debug=True
     )
 
@@ -99,7 +99,9 @@ def test_get_table_data_from_user_input_value_error(test_input, test_ctype):
     mock_prompt_func.return_value = test_input
 
     with pytest.raises(ValueError):  # noqa: PT011
-        get_table_data_from_user_input(mock_config, "tab", mock_prompt_func, debug=True)
+        get_table_data_df_from_user_input(
+            mock_config, "tab", mock_prompt_func, debug=True
+        )
 
 
 def test_get_table_data_from_user_input_pre_set():
@@ -110,7 +112,7 @@ def test_get_table_data_from_user_input_pre_set():
 
     mock_prompt_func = MagicMock()
 
-    result = get_table_data_from_user_input(
+    result = get_table_data_df_from_user_input(
         mock_config, "tab", mock_prompt_func, set_values={"TestColumn": 200}, debug=True
     )
 

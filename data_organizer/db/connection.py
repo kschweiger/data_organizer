@@ -175,7 +175,9 @@ class DatabaseConnection:
         """
         processed_data = self._preprocess_data_for_insert(table, datas)
 
-        return self._insert(table.name, processed_data)
+        inserted_columns = [c.name for c in table.columns if c.is_inserted]
+
+        return self._insert(table.name, inserted_columns, processed_data)
 
     def _preprocess_data_for_insert(
         self, table: TableSetting, datas: List[List[Any]]
@@ -185,7 +187,7 @@ class DatabaseConnection:
 
         Args:
             table: TableSetting object defining the table data is inserted into
-            datas: Data to be inserted
+            datas: Data to be processed
 
         Returns: Preprocessed data
         """
@@ -206,7 +208,7 @@ class DatabaseConnection:
                                 "Passed value for BYTEA column is a valid path. "
                                 "Assuming to read and insert content"
                             )
-                            with open(value, "r") as f:
+                            with open(value, "rb") as f:
                                 value = f.read()
                     value = psycopg2.Binary(value)
                     try:
@@ -222,7 +224,7 @@ class DatabaseConnection:
         return processed_data
 
     def _insert(
-        self, table_name: str, data: List[List[Any]]
+        self, table_name: str, columns: Optional[List[str]], data: List[List[Any]]
     ) -> Tuple[bool, Optional[str]]:
         """
         General purpose insert into database. Only using table_name and a lists
@@ -238,6 +240,8 @@ class DatabaseConnection:
         table = Table(table_name)
 
         insert_statement = self.pypika_query.into(table)
+        if columns is not None:
+            insert_statement = insert_statement.columns(columns)
         for d in data:
             insert_statement = insert_statement.insert(*d)
 
