@@ -24,14 +24,14 @@ def parse_level(this_level: Union[int, str]) -> Tuple[int, Callable]:
 
 def init_logging(this_level: Union[int, str]) -> bool:
     """Helper function for setting up python logging"""
-    log_format = "[%(asctime)s] %(name)-30s %(levelname)-8s %(message)s"
+    log_format = "[%(asctime)s] %(name)-35s %(levelname)-8s %(message)s"
     level, _ = parse_level(this_level)
     coloredlogs.install(level=level, fmt=log_format)
     return True
 
 
 def init_logging_to_file(file_name: str, thisLevel: Union[int, str]) -> None:
-    log_format = "[%(asctime)s] %(name)-30s %(levelname)-8s %(message)s"
+    log_format = "[%(asctime)s] %(name)-35s %(levelname)-8s %(message)s"
     level, _ = parse_level(thisLevel)
     logging.basicConfig(filename=file_name, format=log_format, level=level)
 

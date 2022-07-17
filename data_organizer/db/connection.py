@@ -175,7 +175,10 @@ class DatabaseConnection:
         """
         processed_data = self._preprocess_data_for_insert(table, datas)
 
-        inserted_columns = [c.name for c in table.columns if c.is_inserted]
+        if table.disable_auto_insert_columns:
+            inserted_columns = [c.name for c in table.columns]
+        else:
+            inserted_columns = [c.name for c in table.columns if c.is_inserted]
 
         return self._insert(table.name, inserted_columns, processed_data)
 
@@ -194,7 +197,10 @@ class DatabaseConnection:
         processed_data = []
         for data in datas:
             this_processed_data = []
-            insert_columns = [c for c in table.columns if c.is_inserted]
+            if table.disable_auto_insert_columns:
+                insert_columns = table.columns
+            else:
+                insert_columns = [c for c in table.columns if c.is_inserted]
             if len(data) != len(insert_columns):
                 raise InvalidDataException(
                     "Number of passed data does not match number of columns expected"
@@ -245,13 +251,15 @@ class DatabaseConnection:
         for d in data:
             insert_statement = insert_statement.insert(*d)
 
-        logger.debug(insert_statement.get_sql())
+        sql_insert_statement = insert_statement.get_sql()
+        if len(sql_insert_statement) < 100:
+            logger.debug(sql_insert_statement)
 
         data_inserted = True
         err_str = None
         with self.engine.connect() as connection:
             try:
-                connection.execute(insert_statement.get_sql())
+                connection.execute(sql_insert_statement)
             except IntegrityError as e:
                 logger.error("Data could not be inserted: %s", str(e))
                 data_inserted = False

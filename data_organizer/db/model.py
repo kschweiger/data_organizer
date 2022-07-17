@@ -35,6 +35,7 @@ class TableSetting(BaseModel):
     columns: List[ColumnSetting]
     rel_table: Optional[str] = None
     rel_table_common_column: Optional[str] = None
+    disable_auto_insert_columns: bool = False
 
 
 def get_table_setting_from_dict(
