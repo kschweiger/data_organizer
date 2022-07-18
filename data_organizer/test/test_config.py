@@ -17,6 +17,29 @@ def test_get_config(monkeypatch):
     assert config.tables is None
 
 
+def test_get_config_w_kwargs(monkeypatch):
+    test_pw = "abcd"
+    monkeypatch.setenv("CONFIGTEST_DB__PASSWORD", test_pw)
+    config = get_settings(
+        "CONFIGTEST",
+        config_dir_base="data_organizer/test/conf",
+        secrets="",
+        new_key_str="value",
+        new_key_list=["value", "in", "list"],
+        new_key_dict={"key1": ["v1", "v2"], "key2": ["v3", "v4"]},
+    )
+
+    assert isinstance(config.new_key_str, str)
+    assert isinstance(config.new_key_list, list)
+    assert config.new_key_list == ["value", "in", "list"]
+    assert isinstance(config.new_key_dict, dict)
+    assert list(config.new_key_dict.keys()) == ["key1", "key2"]
+    assert config.new_key_dict["key1"] == ["v1", "v2"]
+    assert config.new_key_dict.key1 == ["v1", "v2"]
+    assert config.new_key_dict["key2"] == ["v3", "v4"]
+    assert config.new_key_dict.key2 == ["v3", "v4"]
+
+
 def test_get_config_error_required_secret():
     with pytest.raises(ValidationError):
         get_settings(

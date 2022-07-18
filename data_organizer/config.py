@@ -16,6 +16,7 @@ class OrganizerConfig:
         default_settings: str = "settings.toml",
         secrets: str = ".secrets.toml",
         additional_configs: List[str] = [],
+        **kwargs,
     ):
         self.settings = get_settings(
             name=name,
@@ -23,6 +24,7 @@ class OrganizerConfig:
             default_settings=default_settings,
             secrets=secrets,
             additional_configs=additional_configs,
+            **kwargs,
         )
 
         self.tables: Dict[str, TableSetting] = {}
@@ -45,6 +47,7 @@ def get_settings(
     default_settings: str = "settings.toml",
     secrets: str = ".secrets.toml",
     additional_configs: List[str] = [],
+    **kwargs,
 ) -> LazySettings:
     """
     Get the config based on the passed parameters
@@ -76,6 +79,8 @@ def get_settings(
         settings_files=files,
         envvar_prefix=name.upper(),
     )
+
+    settings.update(kwargs)
 
     validate_settings(settings)
 
