@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from dynaconf import Dynaconf, LazySettings, ValidationError, Validator
 
@@ -16,6 +16,7 @@ class OrganizerConfig:
         default_settings: str = "settings.toml",
         secrets: str = ".secrets.toml",
         additional_configs: List[str] = [],
+        overwrite_settings: Dict[str, Any] = {},
         **kwargs,
     ):
         self.settings = get_settings(
@@ -24,6 +25,7 @@ class OrganizerConfig:
             default_settings=default_settings,
             secrets=secrets,
             additional_configs=additional_configs,
+            overwrite_settings=overwrite_settings,
             **kwargs,
         )
 
@@ -47,6 +49,7 @@ def get_settings(
     default_settings: str = "settings.toml",
     secrets: str = ".secrets.toml",
     additional_configs: List[str] = [],
+    overwrite_settings: Dict[str, Any] = {},
     **kwargs,
 ) -> LazySettings:
     """
@@ -80,7 +83,12 @@ def get_settings(
         envvar_prefix=name.upper(),
     )
 
-    settings.update(kwargs)
+    settings.update(kwargs, merge=True)
+
+    if overwrite_settings:
+        logger.info("Got setting overwrite data")
+        logger.debug("Replacing: %s", overwrite_settings)
+        settings.update(overwrite_settings)
 
     validate_settings(settings)
 
