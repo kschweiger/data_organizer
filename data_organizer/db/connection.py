@@ -1,13 +1,13 @@
 import logging
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 
 import pandas as pd
 import psycopg2
 from pypika import Dialects, MySQLQuery, PostgreSQLQuery
-from pypika.queries import Column, CreateQueryBuilder, Table
-from sqlalchemy import create_engine, inspect
+from pypika.queries import Column, CreateQueryBuilder, QueryBuilder, Table
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError, OperationalError
 
@@ -47,7 +47,7 @@ class DatabaseConnection:
         name: str = "DataOrganizer",
     ):
         url = f"{prefix}://{user}:{password}@{host}:{port}/{database}"
-        logger.info(
+        logger.debug(
             "Engine URL: %s",
             url.replace(":" + password + "@", ":" + len(password) * "?" + "@"),
         )
@@ -103,7 +103,7 @@ class DatabaseConnection:
 
     def close(self) -> None:
         """Close the connection"""
-        logger.info("Closing connection")
+        logger.debug("Closing connection")
         self.engine.dispose()
 
     def __enter__(self):
@@ -126,6 +126,43 @@ class DatabaseConnection:
         if data.empty:
             raise QueryReturnedNoData
 
+        return data
+
+    def query_inc_keys(
+        self, query: Union[str, QueryBuilder]
+    ) -> Tuple[List[Tuple[Any, ...]], List[str]]:
+        """
+        Execute the passed query.
+
+        Args:
+            query: Valid SQL queries as str or pypika.QueryBuilder
+
+        Returns: List of results and list of column names
+        """
+        if isinstance(query, QueryBuilder):
+            query = query.get_sql()
+
+        logger.debug("Query: %s", query.replace("\n", " "))
+        # TODO: Figure out why this still returns LegacyCurserResults
+        with self.engine.connect() as connection:
+            data = connection.execute(text(query))
+
+        ret_data = [tuple(d) for d in list(data)]
+        if not ret_data:
+            raise QueryReturnedNoData
+
+        return ret_data, data.keys()
+
+    def query(self, query: Union[str, QueryBuilder]) -> List[Tuple[Any, ...]]:
+        """
+        Execute the passed query.
+
+        Args:
+            query: Valid SQL queries as str or pypika.QueryBuilder
+
+        Returns: List of results
+        """
+        data, _ = self.query_inc_keys(query)
         return data
 
     def insert_df(

@@ -133,6 +133,7 @@ dmypy.json
 .DS_Store
 *.*~
 .#*
+*.txt
 
 # Dynaconf
 conf/.secrets.toml
