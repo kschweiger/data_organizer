@@ -4,14 +4,14 @@ sync:
 	pip-sync requirements/prod.txt requirements/dev.txt requirements/test.txt
 	pip install -e . --no-deps
 compile-prod:
-	pip-compile --no-header setup.py --output-file requirements/prod.txt $(INTERNALREQ)
+	pip-compile --no-header setup.cfg --output-file requirements/prod.txt $(INTERNALREQ)
 compile-test:
 	pip-compile --no-header requirements/test.in --output-file requirements/test.txt $(INTERNALREQ)
 compile-dev:
 	pip-compile --no-header requirements/dev.in --output-file requirements/dev.txt $(INTERNALREQ)
 full-compile:	compile-prod compile-test compile-dev
 compile-prod-no-update:
-	pip-compile --no-header setup.py --output-file requirements/prod.txt
+	pip-compile --no-header setup.cfg --output-file requirements/prod.txt
 compile-test-no-update:
 	pip-compile --no-header requirements/test.in --output-file requirements/test.txt
 compile-dev-no-update:
