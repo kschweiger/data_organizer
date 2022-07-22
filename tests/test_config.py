@@ -8,9 +8,7 @@ from data_organizer.db.model import TableSetting
 def test_get_config(monkeypatch):
     test_pw = "abcd"
     monkeypatch.setenv("CONFIGTEST_DB__PASSWORD", test_pw)
-    config = get_settings(
-        "CONFIGTEST", config_dir_base="data_organizer/test/conf", secrets=""
-    )
+    config = get_settings("CONFIGTEST", config_dir_base="tests/conf", secrets="")
 
     assert isinstance(config, LazySettings)
     assert config.db.password == test_pw
@@ -22,7 +20,7 @@ def test_get_config_w_kwargs(monkeypatch):
     monkeypatch.setenv("CONFIGTEST_DB__PASSWORD", test_pw)
     config = get_settings(
         "CONFIGTEST",
-        config_dir_base="data_organizer/test/conf",
+        config_dir_base="tests/conf",
         secrets="",
         new_key_str="value",
         new_key_list=["value", "in", "list"],
@@ -42,9 +40,7 @@ def test_get_config_w_kwargs(monkeypatch):
 
 def test_get_config_error_required_secret():
     with pytest.raises(ValidationError):
-        get_settings(
-            "CONFIGTEST", config_dir_base="data_organizer/test/conf", secrets=""
-        )
+        get_settings("CONFIGTEST", config_dir_base="tests/conf", secrets="")
 
 
 def test_get_config_table_good(monkeypatch):
@@ -52,7 +48,7 @@ def test_get_config_table_good(monkeypatch):
     monkeypatch.setenv("CONFIGTEST_DB__PASSWORD", test_pw)
     config = get_settings(
         "CONFIGTEST",
-        config_dir_base="data_organizer/test/conf",
+        config_dir_base="tests/conf",
         secrets="",
         additional_configs=["test_table_good.toml"],
     )
@@ -79,7 +75,7 @@ def test_get_config_table_error(monkeypatch, table_file_name):
     with pytest.raises(ValidationError):
         get_settings(
             "CONFIGTEST",
-            config_dir_base="data_organizer/test/conf",
+            config_dir_base="tests/conf",
             secrets="",
             additional_configs=[table_file_name],
         )
@@ -90,7 +86,7 @@ def test_organizer_config_tables(monkeypatch):
     monkeypatch.setenv("CONFIGTEST_DB__PASSWORD", test_pw)
     config = OrganizerConfig(
         "CONFIGTEST",
-        config_dir_base="data_organizer/test/conf",
+        config_dir_base="tests/conf",
         secrets="",
         additional_configs=["test_table_good.toml"],
     )
@@ -106,7 +102,7 @@ def test_organizer_rel_tables(monkeypatch):
     monkeypatch.setenv("CONFIGTEST_DB__PASSWORD", test_pw)
     config = OrganizerConfig(
         "CONFIGTEST",
-        config_dir_base="data_organizer/test/conf",
+        config_dir_base="tests/conf",
         secrets="",
         additional_configs=["test_table_good_w_rel.toml"],
     )
@@ -120,7 +116,7 @@ def test_organizer_is_inserted_auto_fill_cols(monkeypatch):
     monkeypatch.setenv("CONFIGTEST_DB__PASSWORD", test_pw)
     config = OrganizerConfig(
         "CONFIGTEST",
-        config_dir_base="data_organizer/test/conf",
+        config_dir_base="tests/conf",
         secrets="",
         additional_configs=["test_table_good_serial.toml"],
     )

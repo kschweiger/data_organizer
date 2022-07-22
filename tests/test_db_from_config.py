@@ -26,7 +26,7 @@ def config() -> OrganizerConfig:
     ):
         config = OrganizerConfig(
             "TESTCONFIG",
-            config_dir_base="data_organizer/test/conf",
+            config_dir_base="tests/conf",
             secrets="",
             additional_configs=["test_table_good.toml"],
         )
