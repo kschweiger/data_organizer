@@ -36,4 +36,4 @@ jobs:
             pip install -e .
       - name: Test
         run: |
-            python -m pytest -v --cov-report term-missing --cov data_organizer data_organizer/test
+            python -m pytest -v --cov-report term-missing --cov data_organizer tests
