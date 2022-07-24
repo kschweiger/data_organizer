@@ -29,7 +29,7 @@ class OrganizerConfig:
             **kwargs,
         )
 
-        self.tables: Dict[str, TableSetting] = {}
+        tables: Dict[str, TableSetting] = {}
         if self.settings.tables:
             for table in self.settings.tables:
                 table_dict = self.settings[table].to_dict()
@@ -40,7 +40,13 @@ class OrganizerConfig:
                             in self.settings.table_settings.auto_fill_ctypes
                         ):
                             table_dict[key].update({"is_inserted": False})
-                self.tables[table] = get_table_setting_from_dict(table_dict)
+                tables[table] = get_table_setting_from_dict(table_dict)
+
+        self.settings.update({"tables_as_settings": tables})
+
+    @property
+    def tables(self):
+        return self.settings.tables_as_settings
 
 
 def get_settings(
@@ -83,7 +89,8 @@ def get_settings(
         envvar_prefix=name.upper(),
     )
 
-    settings.update(kwargs, merge=True)
+    if kwargs:
+        settings.update(kwargs, merge=True)
 
     if overwrite_settings:
         logger.info("Got setting overwrite data")
