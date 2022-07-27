@@ -6,7 +6,7 @@ from typing import Any, List, Optional, Tuple, Union
 import pandas as pd
 import psycopg2
 from pypika import Dialects, MySQLQuery, PostgreSQLQuery
-from pypika.queries import Column, CreateQueryBuilder, QueryBuilder, Table
+from pypika.queries import Column, CreateQueryBuilder, QueryBuilder, Schema, Table
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -197,7 +197,10 @@ class DatabaseConnection:
         return data_inserted, err_str
 
     def insert(
-        self, table: TableSetting, datas: List[List[Any]]
+        self,
+        table: TableSetting,
+        datas: List[List[Any]],
+        schema: Optional[str] = None,
     ) -> Tuple[bool, Optional[str]]:
         """
         Main insert method that includes validation and processing steps against the
@@ -217,7 +220,7 @@ class DatabaseConnection:
         else:
             inserted_columns = [c.name for c in table.columns if c.is_inserted]
 
-        return self._insert(table.name, inserted_columns, processed_data)
+        return self._insert(table.name, inserted_columns, processed_data, schema=schema)
 
     def _preprocess_data_for_insert(
         self, table: TableSetting, datas: List[List[Any]]
@@ -267,7 +270,11 @@ class DatabaseConnection:
         return processed_data
 
     def _insert(
-        self, table_name: str, columns: Optional[List[str]], data: List[List[Any]]
+        self,
+        table_name: str,
+        columns: Optional[List[str]],
+        data: List[List[Any]],
+        schema: Optional[str] = None,
     ) -> Tuple[bool, Optional[str]]:
         """
         General purpose insert into database. Only using table_name and a lists
@@ -276,11 +283,18 @@ class DatabaseConnection:
         Args:
             table_name: Valid table name
             data: List containing Lists with valid values to insert
+            schema: Optionally explicitly pass a schema if db is used w/o the
+                    schema set in the init or used with one DatabaseConnection
+                    instance over multiple schemas
 
         Returns: Boolean flag denoting success of the insertion and Optional string
                  specifying the error
         """
-        table = Table(table_name)
+        if schema is None:
+            table = Table(table_name)
+        else:
+            schema_ = Schema(schema)
+            table = schema_.__getattr__(table_name)
 
         insert_statement = self.pypika_query.into(table)
         if columns is not None:
