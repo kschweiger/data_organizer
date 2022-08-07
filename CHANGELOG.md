@@ -3,6 +3,19 @@
 
 
 
+## <small>1.0.2 (2022-08-07)</small>
+
+* Bump version: 1.0.1 → 1.0.2 ([1bd7e3c](https://github.com/kschweiger/data_organizer/commit/1bd7e3c))
+* chore: Updated setup.py to fix none working import ([ee2f902](https://github.com/kschweiger/data_organizer/commit/ee2f902))
+* doc: Updated CHANGELOG.md ([22b8972](https://github.com/kschweiger/data_organizer/commit/22b8972))
+
+
+
+##  (2022-08-07)
+
+
+
+
 ## <small>1.0.1 (2022-08-07)</small>
 
 * Bump version: 1.0.0 → 1.0.1 ([a012a69](https://github.com/kschweiger/data_organizer/commit/a012a69))
