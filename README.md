@@ -129,3 +129,14 @@ Options:
   --debug                  Enable debug logging.
   --help                   Show this message and exit.
 ```
+
+
+# Releasing
+
+1. Make sure the `requirements/dev.txt` requirements are installed
+2. Install [conventional-changelog-cli](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-cli) via npm and make sure it can be executed in the current shell
+3. Run the `release` script. Pass `major`, `minor`, or `patch` as argument
+   1. This will bump the current version according to passed argument
+   2. Commit the version bump and create a tag according to the bumped version
+   3. Update the changelog and create a commit for this change
+   4. Push the branch and tag

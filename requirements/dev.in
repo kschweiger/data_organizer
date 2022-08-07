@@ -1,6 +1,8 @@
 -c prod.txt
 -c test.txt
 
+bump2version
+
 pip-tools
 pre-commit
 
