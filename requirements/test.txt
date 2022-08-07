@@ -5,17 +5,13 @@ coverage[toml]==6.4.1
 iniconfig==1.1.1
     # via pytest
 packaging==21.3
-    # via
-    #   -c requirements/prod.txt
-    #   pytest
+    # via pytest
 pluggy==1.0.0
     # via pytest
 py==1.11.0
     # via pytest
 pyparsing==3.0.9
-    # via
-    #   -c requirements/prod.txt
-    #   packaging
+    # via packaging
 pytest==7.1.2
     # via
     #   -r requirements/test.in

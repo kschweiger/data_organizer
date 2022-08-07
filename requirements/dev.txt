@@ -44,9 +44,7 @@ pycodestyle==2.8.0
 pyflakes==2.4.0
     # via flake8
 pyyaml==6.0
-    # via
-    #   -c requirements/prod.txt
-    #   pre-commit
+    # via pre-commit
 six==1.16.0
     # via
     #   -c requirements/prod.txt
