@@ -3,6 +3,19 @@
 
 
 
+## <small>1.0.1 (2022-08-07)</small>
+
+* Bump version: 1.0.0 → 1.0.1 ([a012a69](https://github.com/kschweiger/data_organizer/commit/a012a69))
+* build: Removed unnecessary dependency ([db47643](https://github.com/kschweiger/data_organizer/commit/db47643))
+* doc: Updated CHANGELOG.md ([a684998](https://github.com/kschweiger/data_organizer/commit/a684998))
+
+
+
+##  (2022-08-07)
+
+
+
+
 ## 1.0.0 (2022-08-07)
 
 * Bump version: 0.0.1 → 1.0.0 ([8defaa5](https://github.com/kschweiger/data_organizer/commit/8defaa5))
