@@ -1,7 +1,7 @@
 import logging
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import psycopg2
@@ -336,7 +336,9 @@ class DatabaseConnection:
             return False
 
     def create_table_from_table_info(
-        self, creation_settings: List[TableSetting]
+        self,
+        creation_settings: List[TableSetting],
+        foreign_key_settings: Dict[str, TableSetting] = {},
     ) -> None:
         """
         Creates a table based on the passed settings.
@@ -344,6 +346,7 @@ class DatabaseConnection:
         Args:
             creation_settings: Nested dictionary containing the information to create
                                one or more tables
+            foreign_key_settings:
         """
         for table_info in creation_settings:
             create_columns = []
@@ -370,6 +373,14 @@ class DatabaseConnection:
                 create_statement = create_statement.unique(*unique_columns)
             if primary_columns:
                 create_statement = create_statement.primary_key(*primary_columns)
+
+            if table_info.name in foreign_key_settings:
+                reference_table = foreign_key_settings[table_info.name]
+                create_statement = create_statement.foreign_key(
+                    columns=[Column(reference_table.rel_table_common_column)],
+                    reference_table=Table(reference_table.name),
+                    reference_columns=[Column(reference_table.rel_table_common_column)],
+                )
 
             logger.info("Creating table %s", table_info.name)
             logger.debug(create_statement.get_sql())

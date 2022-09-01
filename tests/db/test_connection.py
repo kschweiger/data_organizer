@@ -6,6 +6,7 @@ import psycopg2
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError, InternalError
 
 from data_organizer.db.connection import Backend, DatabaseConnection
 from data_organizer.db.exceptions import (
@@ -167,6 +168,70 @@ def test_create_from_table_info(db):
     for table in creation_settings:
         assert db.has_table(table.name)
         db.engine.execute(f"DROP TABLE {table.name}")
+
+
+def test_create_table_from_table_info_w_foreign_key(db):
+
+    test_uuid = str(uuid.uuid4()).replace("-", "_")
+
+    cols = {
+        "A": {"ctype": "INT", "is_primary": True},
+        "A1": {"ctype": "INT"},
+    }
+    base_table_setting = TableSetting(
+        name="table_from_info_" + test_uuid,
+        rel_table="table_from_info_rel_" + test_uuid,
+        rel_table_common_column="A",
+        rel_table_common_column_as_foreign_key=True,
+        columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
+    )
+
+    rel_cols = {
+        "A": {"ctype": "INT"},
+        "B1": {"ctype": "INT"},
+        "B2": {"ctype": "INT"},
+    }
+    rel_table_setting = TableSetting(
+        name="table_from_info_rel_" + test_uuid,
+        columns=[ColumnSetting(name=name, **info) for name, info in rel_cols.items()],
+    )
+
+    db.create_table_from_table_info([base_table_setting])
+
+    db.create_table_from_table_info(
+        [rel_table_setting], {rel_table_setting.name: base_table_setting}
+    )
+
+    for table in [base_table_setting, rel_table_setting]:
+        assert db.has_table(table.name)
+
+    with db.engine.connect() as connection:
+        connection.execute(
+            f"""
+            INSERT INTO "table_from_info_{test_uuid}"
+            VALUES (1, 2), (2, 3)
+            """
+        )
+        connection.execute(
+            f"""
+            INSERT INTO "table_from_info_rel_{test_uuid}"
+            VALUES (1, 2, 2), (2, 3, 3)
+            """
+        )
+        # Will violate foreign key constrain
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                f"""
+                INSERT INTO "table_from_info_rel_{test_uuid}"
+                VALUES (3, 4, 4)
+                """
+            )
+
+        with pytest.raises(InternalError):
+            connection.execute(f"DROP TABLE table_from_info_{test_uuid}")
+
+        connection.execute(f"DROP TABLE table_from_info_rel_{test_uuid}")
+        connection.execute(f"DROP TABLE table_from_info_{test_uuid}")
 
 
 def test_DatabaseConnection_schema():
