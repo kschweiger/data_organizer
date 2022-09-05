@@ -1,11 +1,13 @@
 import os
 import uuid
+from typing import Dict, Tuple, Union
 
 import pandas as pd
 import psycopg2
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError, InternalError
 
 from data_organizer.db.connection import Backend, DatabaseConnection
 from data_organizer.db.exceptions import (
@@ -148,7 +150,8 @@ def test_insert_append(db, test_table_create_drop):
         db.insert_df(table_name="bogus_table", data=data_to_insert, if_exists="append")
 
 
-def test_create_from_table_info(db):
+@pytest.mark.parametrize("schema", [None, "test_create_schema"])
+def test_create_from_table_info(db, schema):
     cols = {
         "A": {"ctype": "INT", "is_primary": True, "is_unique": True},
         "B": {"ctype": "INT", "is_primary": True},
@@ -161,12 +164,150 @@ def test_create_from_table_info(db):
             columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
         )
     ]
+    with db.engine.connect() as connection:
+        if schema is not None:
+            connection.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
 
-    db.create_table_from_table_info(creation_settings)
+        db.create_table_from_table_info(creation_settings, schema=schema)
 
-    for table in creation_settings:
+        for table in creation_settings:
+            assert db.has_table(table.name, schema=schema)
+            if schema is None:
+                drop_table_name = table.name
+            else:
+                drop_table_name = f"{schema}.{table.name}"
+            connection.execute(f"DROP TABLE {drop_table_name}")
+
+        if schema is not None:
+            connection.execute(f"DROP SCHEMA {schema}")
+
+
+def get_foreign_key_test_settings(test_uuid: str) -> Tuple[TableSetting, TableSetting]:
+    cols: Dict[str, Dict[str, Union[str, bool]]] = {
+        "A": {"ctype": "INT", "is_primary": True},
+        "A1": {"ctype": "INT"},
+    }
+    base_table_setting = TableSetting(
+        name="table_from_info_" + test_uuid,
+        rel_table="table_from_info_rel_" + test_uuid,
+        rel_table_common_column="A",
+        rel_table_common_column_as_foreign_key=True,
+        columns=[ColumnSetting(name=name, **info) for name, info in cols.items()],
+    )
+
+    rel_cols = {
+        "A": {"ctype": "INT"},
+        "B1": {"ctype": "INT"},
+        "B2": {"ctype": "INT"},
+    }
+    rel_table_setting = TableSetting(
+        name="table_from_info_rel_" + test_uuid,
+        columns=[ColumnSetting(name=name, **info) for name, info in rel_cols.items()],
+    )
+
+    return base_table_setting, rel_table_setting
+
+
+@pytest.mark.parametrize("schema", [None, "data_organizer_test"])
+def test_create_table_from_table_info_w_foreign_key(schema):
+    db = DatabaseConnection(USER, PW, DBNAME, schema=schema)
+    test_uuid = str(uuid.uuid4()).replace("-", "_")
+
+    base_table_setting, rel_table_setting = get_foreign_key_test_settings(test_uuid)
+
+    db.create_table_from_table_info([base_table_setting])
+
+    db.create_table_from_table_info(
+        [rel_table_setting], {rel_table_setting.name: base_table_setting}
+    )
+
+    for table in [base_table_setting, rel_table_setting]:
         assert db.has_table(table.name)
-        db.engine.execute(f"DROP TABLE {table.name}")
+
+    with db.engine.connect() as connection:
+        connection.execute(
+            f"""
+            INSERT INTO "table_from_info_{test_uuid}"
+            VALUES (1, 2), (2, 3)
+            """
+        )
+        connection.execute(
+            f"""
+            INSERT INTO "table_from_info_rel_{test_uuid}"
+            VALUES (1, 2, 2), (2, 3, 3)
+            """
+        )
+        # Will violate foreign key constrain
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                f"""
+                INSERT INTO "table_from_info_rel_{test_uuid}"
+                VALUES (3, 4, 4)
+                """
+            )
+
+        with pytest.raises(InternalError):
+            connection.execute(f"DROP TABLE table_from_info_{test_uuid}")
+
+        connection.execute(f"DROP TABLE table_from_info_rel_{test_uuid}")
+        connection.execute(f"DROP TABLE table_from_info_{test_uuid}")
+        if db.schema is not None:
+            db.engine.execute(f"DROP SCHEMA {db.schema}")
+
+    db.close()
+
+
+def test_create_table_from_table_info_w_foreign_key_explicit_schema(db):
+    test_uuid = str(uuid.uuid4()).replace("-", "_")
+
+    base_table_setting, rel_table_setting = get_foreign_key_test_settings(test_uuid)
+
+    schema = "explicit_fk_test"
+
+    with db.engine.connect() as connection:
+        connection.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+
+        db.create_table_from_table_info([base_table_setting], schema=schema)
+
+        db.create_table_from_table_info(
+            [rel_table_setting],
+            {rel_table_setting.name: base_table_setting},
+            schema=schema,
+        )
+
+        for table in [base_table_setting, rel_table_setting]:
+            assert db.has_table(table.name, schema=schema)
+
+        connection.execute(
+            f"""
+            INSERT INTO "{schema}"."table_from_info_{test_uuid}"
+            VALUES (1, 2), (2, 3)
+            """
+        )
+        connection.execute(
+            f"""
+            INSERT INTO "{schema}"."table_from_info_rel_{test_uuid}"
+            VALUES (1, 2, 2), (2, 3, 3)
+            """
+        )
+        # Will violate foreign key constrain
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                f"""
+                INSERT INTO "{schema}"."table_from_info_rel_{test_uuid}"
+                VALUES (3, 4, 4)
+                """
+            )
+
+        with pytest.raises(InternalError):
+            connection.execute(f"DROP TABLE {schema}.table_from_info_{test_uuid}")
+
+        connection.execute(f"DROP TABLE {schema}.table_from_info_rel_{test_uuid}")
+        connection.execute(f"DROP TABLE {schema}.table_from_info_{test_uuid}")
+
+        connection.execute(f"DROP SCHEMA {schema}")
+
+    db.close()
 
 
 def test_DatabaseConnection_schema():

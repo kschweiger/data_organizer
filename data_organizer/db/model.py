@@ -35,6 +35,7 @@ class TableSetting(BaseModel):
     columns: List[ColumnSetting]
     rel_table: Optional[str] = None
     rel_table_common_column: Optional[str] = None
+    rel_table_common_column_as_foreign_key: bool = False
     disable_auto_insert_columns: bool = False
 
 

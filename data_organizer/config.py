@@ -143,7 +143,12 @@ def validate_table(settings: LazySettings) -> None:
         for key, cfg_type in settings.table_settings.key_types.items()
     }
 
-    top_level_table_options = ["name", "rel_table", "rel_table_common_column"]
+    top_level_table_options = [
+        "name",
+        "rel_table",
+        "rel_table_common_column",
+        "rel_table_common_column_as_foreign_key",
+    ]
 
     for table in settings.tables:
         table_settings = settings[table]
@@ -162,6 +167,25 @@ def validate_table(settings: LazySettings) -> None:
                     "rel_table_common_column has to be set because "
                     "rel_table is set in **%s**" % table
                 )
+
+            if "rel_table_common_column_as_foreign_key" in table_settings.keys():
+                common_column = table_settings["rel_table_common_column"]
+                if not isinstance(
+                    table_settings["rel_table_common_column_as_foreign_key"], bool
+                ):
+                    raise ValidationError(
+                        "rel_table_common_column_as_foreign_key must be of type bool"
+                    )
+                if (
+                    table_settings[common_column].get("is_primary") is None
+                    or not table_settings[common_column].is_primary
+                ):
+                    raise ValidationError(
+                        "The common column needs to be a primary key "
+                        "in the main table"
+                    )
+            # else:
+            #     table_settings["rel_table_common_column_as_foreign_key"] = False
 
             if (
                 table_settings["rel_table_common_column"]
