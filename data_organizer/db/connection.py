@@ -209,6 +209,7 @@ class DatabaseConnection:
         Args:
             table: TableSetting object defining the table data is inserted into
             datas: Data to be inserted
+            schema: Explicitly pass a schema if it is not defined in the db
 
         Returns: Boolean flag denoting success of the insertion and Optional string
                  specifying the error
@@ -318,18 +319,19 @@ class DatabaseConnection:
 
         return data_inserted, err_str
 
-    def has_table(self, table_name: str) -> bool:
+    def has_table(self, table_name: str, schema: Optional[str] = None) -> bool:
         """
         Check if the passed table exits in the active connection
 
         Args:
             table_name: Name of the table
+            schema: Explicitly pass a schema if it is not defined in the db
 
         Returns:
             True if table exists, False otherwise
         """
         with self.engine.connect() as connection:
-            has_table = inspect(connection).has_table(table_name)
+            has_table = inspect(connection).has_table(table_name, schema)
         if has_table:
             return True
         else:
@@ -339,6 +341,7 @@ class DatabaseConnection:
         self,
         creation_settings: List[TableSetting],
         foreign_key_settings: Dict[str, TableSetting] = {},
+        schema: Optional[str] = None,
     ) -> None:
         """
         Creates a table based on the passed settings.
@@ -347,6 +350,7 @@ class DatabaseConnection:
             creation_settings: Nested dictionary containing the information to create
                                one or more tables
             foreign_key_settings:
+            schema: Explicitly pass a schema if it is not defined in the db
         """
         for table_info in creation_settings:
             create_columns = []
@@ -364,9 +368,16 @@ class DatabaseConnection:
                     unique_columns.append(column_info.name)
                 if column_info.is_primary:
                     primary_columns.append(column_info.name)
+
+            if schema is None:
+                table = Table(table_info.name)
+            else:
+                schema_ = Schema(schema)
+                table = schema_.__getattr__(table_info.name)
+
             create_statement = (
                 CreateQueryBuilder(dialect=self.dialect)
-                .create_table(table_info.name)
+                .create_table(table)
                 .columns(*create_columns)
             )
             if unique_columns:
@@ -376,9 +387,16 @@ class DatabaseConnection:
 
             if table_info.name in foreign_key_settings:
                 reference_table = foreign_key_settings[table_info.name]
+
+                if schema is None:
+                    ref_table_obj = Table(reference_table.name)
+                else:
+                    schema_ = Schema(schema)
+                    ref_table_obj = schema_.__getattr__(reference_table.name)
+
                 create_statement = create_statement.foreign_key(
                     columns=[Column(reference_table.rel_table_common_column)],
-                    reference_table=Table(reference_table.name),
+                    reference_table=ref_table_obj,
                     reference_columns=[Column(reference_table.rel_table_common_column)],
                 )
 
