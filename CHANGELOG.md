@@ -1,3 +1,17 @@
+##  (2022-09-05)
+
+
+
+
+## 1.1.0 (2022-09-05)
+
+* Bump version: 1.0.2 → 1.1.0 ([9370b19](https://github.com/kschweiger/data_organizer/commit/9370b19))
+* feat: Add support for foreign keys (#4) ([a41903b](https://github.com/kschweiger/data_organizer/commit/a41903b)), closes [#4](https://github.com/kschweiger/data_organizer/issues/4)
+* chore: Added MIT License ([b4245ec](https://github.com/kschweiger/data_organizer/commit/b4245ec))
+* doc: Updated CHANGELOG.md ([0ac81b8](https://github.com/kschweiger/data_organizer/commit/0ac81b8))
+
+
+
 ##  (2022-08-07)
 
 
