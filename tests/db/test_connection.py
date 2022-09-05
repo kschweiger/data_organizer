@@ -170,8 +170,9 @@ def test_create_from_table_info(db):
         db.engine.execute(f"DROP TABLE {table.name}")
 
 
-def test_create_table_from_table_info_w_foreign_key(db):
-
+@pytest.mark.parametrize("schema", [None, "data_organizer_test"])
+def test_create_table_from_table_info_w_foreign_key(schema):
+    db = DatabaseConnection(USER, PW, DBNAME, schema=schema)
     test_uuid = str(uuid.uuid4()).replace("-", "_")
 
     cols = {
@@ -232,6 +233,10 @@ def test_create_table_from_table_info_w_foreign_key(db):
 
         connection.execute(f"DROP TABLE table_from_info_rel_{test_uuid}")
         connection.execute(f"DROP TABLE table_from_info_{test_uuid}")
+        if db.schema is not None:
+            db.engine.execute(f"DROP SCHEMA {db.schema}")
+
+    db.close()
 
 
 def test_DatabaseConnection_schema():
