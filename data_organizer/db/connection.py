@@ -10,6 +10,7 @@ from pypika.queries import Column, CreateQueryBuilder, QueryBuilder, Schema, Tab
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.sql import ClauseElement
 
 from data_organizer.db.exceptions import (
     BinaryDataException,
@@ -110,16 +111,46 @@ class DatabaseConnection:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def query_to_df(self, sql: str) -> pd.DataFrame:
+    def _convert_to_sqla_clause(
+        self,
+        query: Union[
+            str,
+            ClauseElement,
+            QueryBuilder,
+        ],
+    ) -> ClauseElement:
+        if isinstance(query, str):
+            logger.debug("Converting passed str to TextClause")
+            query = text(query)
+        elif isinstance(query, QueryBuilder):
+            logger.debug("Converting passed pypika QueryBuilder to TextClause")
+            query = text(query.get_sql())
+
+        return query
+
+    def query_to_df(
+        self,
+        sql: Union[
+            str,
+            ClauseElement,
+            QueryBuilder,
+        ],
+    ) -> pd.DataFrame:
         """
         Function wrapping a SQL query using the engine
 
         Args:
           sql : Valid SQL query
         """
-        logger.debug("Query: %s", sql.replace("\n", " "))
+        sql = self._convert_to_sqla_clause(sql)
+
+        try:
+            logger.debug("Query: %s", sql.text.replace("\n", " "))
+        except AttributeError:
+            pass
+
         with self.engine.connect() as connection:
-            data: pd.DataFrame = pd.read_sql_query(text(sql), connection)
+            data: pd.DataFrame = pd.read_sql_query(sql, connection)
 
         if data.empty:
             raise QueryReturnedNoData
@@ -127,7 +158,12 @@ class DatabaseConnection:
         return data
 
     def query_inc_keys(
-        self, query: Union[str, QueryBuilder]
+        self,
+        query: Union[
+            str,
+            ClauseElement,
+            QueryBuilder,
+        ],
     ) -> Tuple[List[Tuple[Any, ...]], List[str]]:
         """
         Execute the passed query.
@@ -137,13 +173,15 @@ class DatabaseConnection:
 
         Returns: List of results and list of column names
         """
-        if isinstance(query, QueryBuilder):
-            query = query.get_sql()
+        query = self._convert_to_sqla_clause(query)
 
-        logger.debug("Query: %s", query.replace("\n", " "))
-        # TODO: Figure out why this still returns LegacyCurserResults
+        try:
+            logger.debug("Query: %s", query.text.replace("\n", " "))
+        except AttributeError:
+            pass
+
         with self.engine.connect() as connection:
-            data = connection.execute(text(query))
+            data = connection.execute(query)
             connection.commit()
         ret_data = [tuple(d) for d in list(data)]
         if not ret_data:

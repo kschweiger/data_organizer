@@ -59,13 +59,13 @@ def test_table_create_drop(engine):
         connection.execute(
             text(
                 f"""
-            CREATE TABLE {table} (
-            id varchar(255) NOT NULL,
-            col1 float DEFAULT NULL,
-            col2 float DEFAULT NULL,
-            PRIMARY KEY (id)
-            )
-            """
+                CREATE TABLE {table} (
+                id varchar(255) NOT NULL,
+                col1 float DEFAULT NULL,
+                col2 float DEFAULT NULL,
+                PRIMARY KEY (id)
+                )
+                """
             )
         )
         connection.execute(
@@ -108,7 +108,7 @@ def test_DatabaseConnection_init_invalid():
     assert not db.is_valid
 
 
-def test_query(db, test_table_create_drop):
+def test_query_to_df(db, test_table_create_drop):
     this_data = db.query_to_df(
         f"""
         SELECT *
@@ -429,6 +429,39 @@ def test_underscore_insert(db, test_table_create_drop, data, columns, exp_ids):
     assert ids_post_insert.id.to_list() == exp_ids
 
 
+def test_underscore_insert_w_schema(db):
+    schema = "test_schema_for_insert"
+    test_table_name = "test_table_" + str(uuid.uuid4()).replace("-", "_")
+    with db.engine.connect() as connection:
+        connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+        connection.commit()
+
+        connection.execute(
+            text(
+                f"""
+                CREATE TABLE {schema}.{test_table_name} (
+                id varchar(255) NOT NULL,
+                col1 float DEFAULT NULL,
+                PRIMARY KEY (id)
+                )
+                """
+            )
+        )
+        connection.commit()
+
+    db._insert(test_table_name, ["id", "col1"], [[1, 20.0]], schema=schema)
+
+    data = db.query_to_df(text(f"SELECT * FROM  {schema}.{test_table_name}"))
+    assert not data.empty
+
+    with db.engine.connect() as connection:
+        connection.execute(text(f"DROP TABLE {schema}.{test_table_name}"))
+        connection.commit()
+
+        connection.execute(text(f"DROP SCHEMA {schema}"))
+        connection.commit()
+
+
 def test_preprocess_data_for_insert_w_serial(db):
     cols = {
         "A": {"ctype": "SERIAL", "is_primary": True, "is_inserted": False},
@@ -552,3 +585,43 @@ def test_insert(db, test_table_create_drop):
 
     assert not ids_pre_insert.equals(ids_post_insert)
     assert ids_post_insert.id.to_list() == exp_ids
+
+
+def test_query(db, test_table_create_drop):
+    this_data = db.query(
+        f"""
+        SELECT *
+        FROM {test_table_create_drop} t
+        """
+    )
+
+    assert len(this_data) > 0
+
+    with pytest.raises(QueryReturnedNoData):
+        db.query(
+            f"""
+            SELECT *
+            FROM {test_table_create_drop} t
+            WHERE t.id = 'XYZ'
+            """
+        )
+
+
+def test_query_inc_keys(db, test_table_create_drop):
+    this_data, keys = db.query_inc_keys(
+        f"""
+        SELECT id, col1
+        FROM {test_table_create_drop} t
+        """
+    )
+
+    assert len(this_data) > 0
+    assert set(keys) == {"id", "col1"}
+
+
+def test_query_pypika(db, test_table_create_drop):
+    db.pypika_query.from_(test_table_create_drop).select("*")
+
+    this_data = db.query(db.pypika_query.from_(test_table_create_drop).select("*"))
+
+    assert len(this_data) > 0
