@@ -2,6 +2,7 @@ import os
 from unittest import mock
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from data_organizer.config import OrganizerConfig
@@ -37,7 +38,9 @@ def config() -> OrganizerConfig:
 def database(config):
     db = DatabaseConnection(**config.settings.db.to_dict())
     yield db
-    db.engine.execute(f"DROP SCHEMA {db.schema}")
+    with db.engine.connect() as conn:
+        conn.execute(text(f"DROP SCHEMA {db.schema}"))
+        conn.commit()
     db.close()
 
 
@@ -59,4 +62,6 @@ def test_create_table(config, database):
 
     assert database.has_table(config.settings["table_1"].name)
 
-    database.engine.execute(f"DROP TABLE {config.settings['table_1'].name}")
+    with database.engine.connect() as connection:
+        connection.execute(text(f"DROP TABLE {config.settings['table_1'].name}"))
+        connection.commit()

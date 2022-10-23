@@ -73,9 +73,7 @@ class DatabaseConnection:
                 connect_args.update({"options": f"-csearch_path={schema},public"})
 
         self.engine = create_engine(
-            url,
-            echo=verbose,
-            connect_args=connect_args,
+            url, echo=verbose, connect_args=connect_args, future=True
         )
         connection: Connection
         try:
@@ -93,12 +91,12 @@ class DatabaseConnection:
         if schema is not None and self.is_valid:
             with self.engine.connect() as connection:
                 avail_schemas = connection.execute(
-                    "SELECT schema_name FROM information_schema.schemata"
+                    text("SELECT schema_name FROM information_schema.schemata")
                 )
                 if schema not in [x[0] for x in avail_schemas]:
                     logger.info("Will  create schema: %s", schema)
-                    connection.execute(f"CREATE SCHEMA {schema}")
-
+                    connection.execute(text(f"CREATE SCHEMA {schema}"))
+                connection.commit()
         self.created_tables: List[str] = []
 
     def close(self) -> None:
@@ -121,7 +119,7 @@ class DatabaseConnection:
         """
         logger.debug("Query: %s", sql.replace("\n", " "))
         with self.engine.connect() as connection:
-            data: pd.DataFrame = pd.read_sql_query(sql, connection)
+            data: pd.DataFrame = pd.read_sql_query(text(sql), connection)
 
         if data.empty:
             raise QueryReturnedNoData
@@ -146,7 +144,7 @@ class DatabaseConnection:
         # TODO: Figure out why this still returns LegacyCurserResults
         with self.engine.connect() as connection:
             data = connection.execute(text(query))
-
+            connection.commit()
         ret_data = [tuple(d) for d in list(data)]
         if not ret_data:
             raise QueryReturnedNoData
@@ -182,17 +180,24 @@ class DatabaseConnection:
         logger.debug(
             "Inserting data into table %s - if_exists = %s", table_name, if_exists
         )
-        err_str = None
-        try:
-            with self.engine.connect() as connection:
-                data.to_sql(
-                    table_name, con=connection, if_exists=if_exists, index=False
-                )
-                data_inserted = True
-        except IntegrityError as e:
-            logger.error("Data could not be inserted: %s", str(e))
-            data_inserted = False
-            err_str = str(e)
+        data_inserted, err_str = self._insert(
+            table_name=table_name,
+            columns=data.columns.to_list(),
+            data=data.to_records(index=False),
+        )
+        # err_str = None
+        # # Pandas to_sql is currently not working with sqlalchemy 1.4+ syntax
+        # # (aka. future = True in engine)
+        # try:
+        #     with self.engine.connect() as connection:
+        #         data.to_sql(
+        #             table_name, con=connection, if_exists=if_exists, index=False
+        #         )
+        #         data_inserted = True
+        # except IntegrityError as e:
+        #     logger.error("Data could not be inserted: %s", str(e))
+        #     data_inserted = False
+        #     err_str = str(e)
 
         return data_inserted, err_str
 
@@ -249,7 +254,7 @@ class DatabaseConnection:
             for column, value in zip(insert_columns, data):
                 if column.ctype == "BYTEA" and self.backend == Backend.POSTGRES:
                     if isinstance(value, str):
-                        print(Path(value), Path(value).exists())
+                        # print(Path(value), Path(value).exists())
                         if Path(value).exists():
                             logger.debug(
                                 "Passed value for BYTEA column is a valid path. "
@@ -311,11 +316,12 @@ class DatabaseConnection:
         err_str = None
         with self.engine.connect() as connection:
             try:
-                connection.execute(sql_insert_statement)
+                connection.execute(text(sql_insert_statement))
             except IntegrityError as e:
                 logger.error("Data could not be inserted: %s", str(e))
                 data_inserted = False
                 err_str = str(e)
+            connection.commit()
 
         return data_inserted, err_str
 
@@ -404,7 +410,8 @@ class DatabaseConnection:
             logger.debug(create_statement.get_sql())
 
             with self.engine.connect() as connection:
-                connection.execute(create_statement.get_sql())
+                connection.execute(text(create_statement.get_sql()))
+                connection.commit()
 
     def add_column_to_table(self, table_name: str, new_column: ColumnSetting) -> None:
         """
