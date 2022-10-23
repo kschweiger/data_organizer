@@ -1,3 +1,16 @@
+##  (2022-10-23)
+
+
+
+
+## 1.2.0 (2022-10-23)
+
+* Bump version: 1.1.0 → 1.2.0 ([f845411](https://github.com/kschweiger/data_organizer/commit/f845411))
+* refactor: Use SQLAlchemy 2.0 style (#6) ([77704df](https://github.com/kschweiger/data_organizer/commit/77704df)), closes [#6](https://github.com/kschweiger/data_organizer/issues/6) [#5](https://github.com/kschweiger/data_organizer/issues/5) [#5](https://github.com/kschweiger/data_organizer/issues/5)
+* doc: Updated CHANGELOG.md ([dbc9a53](https://github.com/kschweiger/data_organizer/commit/dbc9a53))
+
+
+
 ##  (2022-09-05)
 
 
