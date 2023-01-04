@@ -1,3 +1,4 @@
+from dataclasses import make_dataclass
 from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel
@@ -27,6 +28,23 @@ class ColumnSetting(BaseModel):
         else:
             return self.default
 
+    @property
+    def get_py_type(self):
+
+        if self.ctype in ["INT", "SERIAL"]:
+            base_type = int
+        elif self.ctype == "FLOAT":
+            base_type = float
+        elif self.ctype.startswith("VARCHAR") or self.ctype == "TEXT":
+            base_type = str
+        else:
+            base_type = None
+
+        if base_type is not None and self.is_nullable:
+            return Optional[base_type]
+        else:
+            return base_type
+
 
 class TableSetting(BaseModel):
     """Object holding the information for a table"""
@@ -37,6 +55,19 @@ class TableSetting(BaseModel):
     rel_table_common_column: Optional[str] = None
     rel_table_common_column_as_foreign_key: bool = False
     disable_auto_insert_columns: bool = False
+
+    @property
+    def dataclass(self):
+        fields = []
+        for column in self.columns:
+            column_name = column.name
+            py_type = column.get_py_type
+            if py_type is None:
+                fields.append(column_name)
+            else:
+                fields.append((column_name, py_type))
+
+        return make_dataclass(cls_name=self.name, fields=fields)
 
 
 def get_table_setting_from_dict(

@@ -47,17 +47,15 @@ def enhance_tracks(
     existing_ids = []
     if skip_existing:
         existing_query = db.pypika_query.from_(tgt_table).select("id_track", "id_ride")
-        with db.engine.connect() as conn:
-            existing_tracks = conn.execute(existing_query.get_sql())
+
+        existing_tracks = db.query(existing_query)
 
         for id_track, id_ride in existing_tracks:
             existing_ids.append((id_track, id_ride))
 
     in_data_query = db.pypika_query.from_(src_table).select("*")
 
-    with db.engine.connect() as conn:
-        input_track_data = conn.execute(in_data_query.get_sql())
-
+    input_track_data = db.query(in_data_query)
     new_data_to_insert = []
     for id_track, id_ride, track_ in input_track_data:
         if (id_track, id_ride) in existing_ids:
