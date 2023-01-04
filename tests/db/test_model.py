@@ -1,3 +1,6 @@
+from dataclasses import asdict, is_dataclass
+from typing import Optional
+
 import pytest
 
 from data_organizer.db.model import (
@@ -144,3 +147,55 @@ def test_get_table_setting_from_dict():
     table_setting = get_table_setting_from_dict(test_dict)
 
     assert isinstance(table_setting, TableSetting)
+
+
+@pytest.mark.parametrize(
+    ("columns", "values", "types"),
+    [
+        ({"A": {"ctype": "INT"}}, {"A": 1}, {"A": int}),
+        ({"A": {"ctype": "SERIAL"}}, {"A": 1}, {"A": int}),
+        ({"A": {"ctype": "FLOAT"}}, {"A": 1.0}, {"A": float}),
+        ({"A": {"ctype": "VARCHAR"}}, {"A": "ABCD"}, {"A": str}),
+        ({"A": {"ctype": "VARCHAR(20)"}}, {"A": "ABCD"}, {"A": str}),
+        ({"A": {"ctype": "TEXT"}}, {"A": "ABCD"}, {"A": str}),
+        (
+            {"A": {"ctype": "INT", "is_nullable": True}},
+            {"A": 1.0},
+            {"A": Optional[int]},
+        ),
+        (
+            {"A": {"ctype": "INT"}, "B": {"ctype": "FLOAT"}},
+            {"A": 1, "B": 11.11},
+            {"A": int, "B": float},
+        ),
+    ],
+)
+def test_dataclass(columns, values, types):
+    test_dict = {
+        "name": "table_name",
+    }
+    test_dict.update(columns)
+
+    table_setting = get_table_setting_from_dict(test_dict)
+
+    table_dataclass = table_setting.dataclass
+
+    # Check that it is a dataclass and not and instanciated one
+    assert is_dataclass(table_dataclass)
+    assert isinstance(table_dataclass, type)
+
+    assert all(
+        [c in table_dataclass.__dataclass_fields__.keys() for c in columns.keys()]
+    )
+
+    assert all(
+        [
+            table_dataclass.__dataclass_fields__[c].type == types[c]
+            for c in columns.keys()
+        ]
+    )
+
+    dc = asdict(table_dataclass(**values))
+
+    for key, value in values.items():
+        assert dc[key] == value
