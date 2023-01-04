@@ -1,3 +1,16 @@
+##  (2023-01-04)
+
+
+
+
+## 1.3.0 (2023-01-04)
+
+* Bump version: 1.2.0 → 1.3.0 ([e210ce3](https://github.com/kschweiger/data_organizer/commit/e210ce3))
+* feat: Dataclass from TableSettings (#10) ([0db1ec7](https://github.com/kschweiger/data_organizer/commit/0db1ec7)), closes [#10](https://github.com/kschweiger/data_organizer/issues/10)
+* doc: Updated CHANGELOG.md ([ee5d6c4](https://github.com/kschweiger/data_organizer/commit/ee5d6c4))
+
+
+
 ##  (2022-10-23)
 
 
