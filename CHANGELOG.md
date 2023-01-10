@@ -1,3 +1,16 @@
+##  (2023-01-10)
+
+
+
+
+## 1.4.0 (2023-01-10)
+
+* Bump version: 1.3.0 → 1.4.0 ([3b5e1fb](https://github.com/kschweiger/data_organizer/commit/3b5e1fb))
+* feat(DatabaseConnection): Added generic sql execution method ([477568b](https://github.com/kschweiger/data_organizer/commit/477568b))
+* doc: Updated CHANGELOG.md ([4bc2b98](https://github.com/kschweiger/data_organizer/commit/4bc2b98))
+
+
+
 ##  (2023-01-04)
 
 
