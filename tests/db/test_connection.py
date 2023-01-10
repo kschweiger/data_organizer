@@ -5,6 +5,7 @@ from typing import Dict, Tuple, Union
 import pandas as pd
 import psycopg2
 import pytest
+from pypika import Table
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError, InternalError
@@ -625,3 +626,36 @@ def test_query_pypika(db, test_table_create_drop):
     this_data = db.query(db.pypika_query.from_(test_table_create_drop).select("*"))
 
     assert len(this_data) > 0
+
+
+def test_exec_arbitrary_w_update(db, test_table_create_drop):
+    table_ = Table(test_table_create_drop)
+    query_value = (
+        db.pypika_query.from_(table_).select(table_.col2).where(table_.id == "D")
+    )
+    value_pre = db.query(query_value)[0][0]
+
+    query_update = (
+        db.pypika_query.update(table_).set(table_.col2, 42.42).where(table_.id == "D")
+    )
+    update_succ = db.exec_arbitrary(query_update)
+
+    assert update_succ
+
+    value_post = db.query(query_value)[0][0]
+
+    assert value_pre != value_post
+    assert value_post == 42.42
+
+
+def test_exec_arbitrary_w_update_data_error(db, test_table_create_drop):
+    table_ = Table(test_table_create_drop)
+
+    query_update = (
+        db.pypika_query.update(table_)
+        .set(table_.col2, "sdfghsgkfgasdfz")
+        .where(table_.id == "D")
+    )
+    update_succ = db.exec_arbitrary(query_update)
+
+    assert not update_succ

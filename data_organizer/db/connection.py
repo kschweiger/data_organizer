@@ -9,7 +9,7 @@ from pypika import Dialects, MySQLQuery, PostgreSQLQuery
 from pypika.queries import Column, CreateQueryBuilder, QueryBuilder, Schema, Table
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Connection
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import DataError, IntegrityError, OperationalError
 from sqlalchemy.sql import ClauseElement
 
 from data_organizer.db.exceptions import (
@@ -127,6 +127,31 @@ class DatabaseConnection:
             query = text(query.get_sql())
 
         return query
+
+    def exec_arbitrary(
+        self,
+        sql: Union[
+            str,
+            ClauseElement,
+            QueryBuilder,
+        ],
+    ) -> bool:
+        sql = self._convert_to_sqla_clause(sql)
+
+        logger.debug("Query: %s", sql)
+
+        ret = True
+        with self.engine.connect() as connection:
+            try:
+                connection.execute(sql)
+            except DataError as e:
+                logger.error("Data could not be updated %s", str(e.orig).split("(")[0])
+                logger.debug(e)
+                ret = False
+            else:
+                connection.commit()
+
+        return ret
 
     def query_to_df(
         self,
